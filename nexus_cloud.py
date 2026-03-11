@@ -135,6 +135,16 @@ async def options_handler(request):
 
 
 async def index_handler(request):
+    # If token in query, serve nexus_voice.html
+    token = request.rel_url.query.get('token', '')
+    if token:
+        # Serve nexus_voice.html
+        html_path = os.path.join(os.path.dirname(__file__), 'nexus_voice.html')
+        if os.path.exists(html_path):
+            return web.FileResponse(html_path)
+        else:
+            return web.Response(text='nexus_voice.html not found on server!', content_type='text/plain')
+
     html = """<!DOCTYPE html>
 <html><head><title>NEXUS Cloud</title>
 <style>
