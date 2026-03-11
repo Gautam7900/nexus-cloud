@@ -1,0 +1,1547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NEXUS — Full Laptop Voice Control</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><style>.n{fill:%2300e5ff;}.g{fill:%2300ff9d;}</style></defs><circle class='n' cx='50' cy='50' r='48' fill='none' stroke='%2300e5ff' stroke-width='2'/><circle class='g' cx='50' cy='50' r='35' fill='none' stroke='%2300ff9d' stroke-width='1.5'/><circle cx='50' cy='50' r='20' fill='%2300e5ff' opacity='0.3'/><text x='50' y='60' text-anchor='middle' font-size='40' font-weight='bold' fill='%2300e5ff' font-family='Arial'>N</text></svg>">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap');
+:root{--bg:#040810;--panel:#08111c;--panel2:#0d1825;--b:#1a2a3a;--cyan:#00e5ff;--green:#00ff9d;--red:#ff2d6b;--amber:#ffb700;--purple:#b060ff;--text:#cdd9e5;--muted:#3a5268;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:'Share Tech Mono',monospace;min-height:100vh;display:flex;flex-direction:column;align-items:center;background-image:radial-gradient(ellipse at 50% 0%,rgba(0,229,255,0.05) 0%,transparent 55%);}
+.grid-bg{position:fixed;inset:0;pointer-events:none;background-image:linear-gradient(rgba(0,229,255,0.02) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,255,0.02) 1px,transparent 1px);background-size:55px 55px;animation:gd 40s linear infinite;}
+@keyframes gd{to{background-position:55px 55px;}}
+.scanline{position:fixed;width:100%;height:1px;background:linear-gradient(90deg,transparent,rgba(0,229,255,0.08),transparent);animation:sc 10s linear infinite;pointer-events:none;z-index:1;}
+@keyframes sc{from{top:-1px}to{top:100vh}}
+.hdr{position:relative;z-index:10;width:100%;max-width:1150px;display:flex;align-items:center;justify-content:space-between;padding:16px 28px 0;}
+.logo{font-family:'Orbitron',monospace;font-size:1.3rem;font-weight:900;letter-spacing:0.35em;background:linear-gradient(135deg,var(--cyan),var(--green));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.badges{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.badge{font-size:0.57rem;letter-spacing:0.12em;padding:3px 10px;border:1px solid var(--b);border-radius:20px;color:var(--muted);text-transform:uppercase;}
+.badge.ok{border-color:rgba(0,255,157,0.35);color:var(--green);}
+.badge.err{border-color:rgba(255,45,107,0.35);color:var(--red);}
+.badge.warn{border-color:rgba(255,183,0,0.35);color:var(--amber);}
+.main{position:relative;z-index:10;width:100%;max-width:1150px;display:grid;grid-template-columns:1fr 300px;gap:18px;padding:18px 28px 26px;}
+@media(max-width:820px){.main{grid-template-columns:1fr;}}
+.left{display:flex;flex-direction:column;align-items:center;gap:16px;}
+.orb-w{position:relative;width:190px;height:190px;cursor:pointer;flex-shrink:0;}
+.ring{position:absolute;border-radius:50%;border:1px solid rgba(0,229,255,0.1);}
+.r1{inset:0;animation:sp 10s linear infinite;}
+.r2{inset:11px;border-color:rgba(0,255,157,0.07);animation:sp 17s linear infinite reverse;}
+.r3{inset:22px;border-color:rgba(176,96,255,0.06);animation:sp 7s linear infinite;}
+.r4{inset:33px;animation:sp 23s linear infinite reverse;}
+@keyframes sp{to{transform:rotate(360deg);}}
+.odot{position:absolute;width:5px;height:5px;border-radius:50%;background:var(--cyan);box-shadow:0 0 6px var(--cyan);animation:od 4s linear infinite;top:calc(50% - 2.5px);left:-2.5px;transform-origin:calc(95px + 2.5px) 2.5px;}
+.odot:nth-child(2){animation-delay:-2s;animation-duration:5.5s;background:var(--green);box-shadow:0 0 6px var(--green);}
+.odot:nth-child(3){animation-delay:-1s;animation-duration:7s;background:var(--purple);box-shadow:0 0 6px var(--purple);}
+@keyframes od{to{transform:rotate(360deg);}}
+.orb-core{position:absolute;inset:44px;border-radius:50%;background:radial-gradient(circle at 35% 30%,rgba(0,229,255,0.18),rgba(0,229,255,0.02) 60%,transparent);border:1px solid rgba(0,229,255,0.18);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:4px;transition:all 0.4s;box-shadow:0 0 28px rgba(0,229,255,0.05),inset 0 0 18px rgba(0,229,255,0.04);}
+.orb-core.listening{border-color:rgba(0,229,255,0.9);box-shadow:0 0 70px rgba(0,229,255,0.45),0 0 130px rgba(0,229,255,0.12),inset 0 0 40px rgba(0,229,255,0.18);animation:ob .9s ease-in-out infinite;}
+.orb-core.processing{border-color:rgba(255,183,0,.7);box-shadow:0 0 55px rgba(255,183,0,.3),inset 0 0 28px rgba(255,183,0,.1);}
+.orb-core.speaking{border-color:rgba(0,255,157,.8);box-shadow:0 0 65px rgba(0,255,157,.35),inset 0 0 32px rgba(0,255,157,.12);animation:ob .5s ease-in-out infinite;}
+.orb-core.error{border-color:rgba(255,45,107,.7);box-shadow:0 0 50px rgba(255,45,107,.25);}
+@keyframes ob{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
+.orb-ico{font-size:1.9rem;}
+.orb-lbl{font-family:'Orbitron',monospace;font-size:0.48rem;letter-spacing:0.2em;color:var(--cyan);}
+.wf{display:flex;align-items:center;justify-content:center;gap:2px;height:40px;width:100%;max-width:360px;}
+.wb{width:3px;background:var(--cyan);border-radius:2px;height:3px;transition:height .08s ease;}
+.tx-lbl{font-size:0.56rem;letter-spacing:0.22em;color:var(--muted);text-transform:uppercase;margin-bottom:5px;text-align:center;}
+.tx-txt{font-size:1rem;color:var(--cyan);min-height:26px;word-wrap:break-word;line-height:1.5;padding:0 10px;text-align:center;}
+.tx-txt.empty{color:var(--muted);font-size:0.76rem;font-style:italic;}
+.resp-box{width:100%;background:var(--panel);border:1px solid var(--b);border-radius:10px;padding:14px 18px;position:relative;min-height:66px;}
+.resp-box::before{content:'NEXUS';position:absolute;top:-1px;left:16px;font-size:0.5rem;letter-spacing:0.25em;color:var(--muted);background:var(--panel);padding:0 7px;}
+.resp-txt{color:var(--green);font-size:0.85rem;line-height:1.7;}
+.out-x{margin-top:10px;}
+.ac{margin-top:8px;padding:10px 13px;border-radius:8px;background:rgba(0,229,255,0.04);border:1px solid rgba(0,229,255,0.13);font-size:0.73rem;display:flex;align-items:center;gap:10px;}
+.ac.success{background:rgba(0,255,157,0.05);border-color:rgba(0,255,157,0.2);}
+.ac.error{background:rgba(255,45,107,0.05);border-color:rgba(255,45,107,0.2);}
+.ac-ico{font-size:1.2rem;flex-shrink:0;}
+.ac-title{color:var(--cyan);font-size:0.7rem;}
+.ac-sub{color:var(--muted);font-size:0.6rem;margin-top:2px;}
+.timer-big{font-family:'Orbitron',monospace;font-size:2rem;color:var(--cyan);text-align:center;letter-spacing:0.08em;margin-top:8px;}
+
+/* ── AI EMAIL COMPOSER ───────────────────────────────────── */
+.email-card{margin-top:10px;border-radius:10px;overflow:hidden;border:1px solid rgba(0,229,255,0.25);background:rgba(0,229,255,0.03);}
+.email-hdr{display:flex;align-items:center;gap:8px;padding:9px 13px;background:rgba(0,229,255,0.07);border-bottom:1px solid rgba(0,229,255,0.15);}
+.email-hdr-ico{font-size:1rem;}
+.email-hdr-title{font-size:0.65rem;color:var(--cyan);letter-spacing:0.1em;text-transform:uppercase;}
+.email-hdr-sub{font-size:0.55rem;color:var(--muted);margin-top:1px;}
+.email-body{padding:12px 14px;display:flex;flex-direction:column;gap:9px;}
+.email-field{display:flex;flex-direction:column;gap:3px;}
+.email-label{font-size:0.55rem;letter-spacing:0.15em;color:var(--muted);text-transform:uppercase;display:flex;align-items:center;gap:5px;}
+.email-ai-badge{background:rgba(176,96,255,0.2);border:1px solid rgba(176,96,255,0.4);color:var(--purple);font-size:0.48rem;padding:1px 6px;border-radius:10px;letter-spacing:0.08em;}
+.email-input{background:var(--panel2);border:1px solid var(--b);border-radius:5px;padding:7px 10px;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:0.72rem;outline:none;transition:border-color .2s;width:100%;}
+.email-input:focus{border-color:rgba(0,229,255,0.5);box-shadow:0 0 8px rgba(0,229,255,0.12);}
+textarea.email-input{resize:vertical;min-height:90px;line-height:1.6;}
+.email-ai-generating{display:flex;align-items:center;gap:8px;font-size:0.65rem;color:var(--purple);padding:6px 0;}
+.email-ai-dot{width:6px;height:6px;border-radius:50%;background:var(--purple);animation:pu 0.6s infinite;}
+.email-ai-dot:nth-child(2){animation-delay:.15s;}
+.email-ai-dot:nth-child(3){animation-delay:.3s;}
+.email-actions{display:flex;gap:8px;flex-wrap:wrap;}
+.email-btn{padding:7px 16px;border-radius:5px;border:1px solid rgba(0,229,255,0.4);background:rgba(0,229,255,0.08);color:var(--cyan);font-family:'Share Tech Mono',monospace;font-size:0.65rem;cursor:pointer;transition:all .2s;letter-spacing:0.06em;}
+.email-btn:hover{background:rgba(0,229,255,0.22);box-shadow:0 0 10px rgba(0,229,255,0.2);}
+.email-btn.send{background:rgba(0,255,157,0.1);border-color:rgba(0,255,157,0.45);color:var(--green);}
+.email-btn.send:hover{background:rgba(0,255,157,0.25);box-shadow:0 0 10px rgba(0,255,157,0.25);}
+.email-btn.ai-btn{background:rgba(176,96,255,0.1);border-color:rgba(176,96,255,0.4);color:var(--purple);}
+.email-btn.ai-btn:hover{background:rgba(176,96,255,0.22);}
+.email-status{font-size:0.62rem;padding:2px 0;min-height:18px;}
+.email-status.ok{color:var(--green);}
+.email-status.err{color:var(--red);}
+.email-status.info{color:var(--cyan);}
+
+/* ── CONTACT LIST ────────────────────────────────────────── */
+.contacts-card{margin-top:10px;border-radius:10px;overflow:hidden;border:1px solid rgba(0,255,157,0.25);background:rgba(0,255,157,0.02);}
+.contacts-hdr{display:flex;align-items:center;gap:8px;padding:9px 13px;background:rgba(0,255,157,0.06);border-bottom:1px solid rgba(0,255,157,0.15);}
+.contacts-body{padding:12px 14px;display:flex;flex-direction:column;gap:8px;}
+.contact-item{display:flex;align-items:center;justify-content:space-between;padding:7px 10px;background:var(--panel2);border:1px solid var(--b);border-radius:6px;}
+.contact-name{color:var(--cyan);font-size:0.72rem;}
+.contact-email{color:var(--muted);font-size:0.62rem;margin-top:1px;}
+.contact-del{background:transparent;border:1px solid rgba(255,45,107,0.3);color:var(--red);border-radius:4px;padding:3px 8px;font-size:0.58rem;cursor:pointer;font-family:'Share Tech Mono',monospace;}
+.contact-del:hover{background:rgba(255,45,107,0.15);}
+.contact-add-row{display:flex;gap:6px;flex-wrap:wrap;}
+.contact-input{background:var(--panel2);border:1px solid var(--b);border-radius:5px;padding:6px 9px;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:0.68rem;outline:none;flex:1;min-width:90px;}
+.contact-input:focus{border-color:rgba(0,255,157,0.4);}
+.contact-save-btn{padding:6px 13px;border-radius:5px;border:1px solid rgba(0,255,157,0.4);background:rgba(0,255,157,0.08);color:var(--green);font-family:'Share Tech Mono',monospace;font-size:0.62rem;cursor:pointer;white-space:nowrap;}
+.contact-save-btn:hover{background:rgba(0,255,157,0.2);}
+.no-contacts{color:var(--muted);font-size:0.65rem;text-align:center;padding:8px 0;}
+
+/* ── WHATSAPP COMPOSER ───────────────────────────────────── */
+.wa-card{margin-top:10px;border-radius:10px;overflow:hidden;border:1px solid rgba(37,211,102,0.3);background:rgba(37,211,102,0.02);}
+.wa-hdr{display:flex;align-items:center;gap:8px;padding:9px 13px;background:rgba(37,211,102,0.07);border-bottom:1px solid rgba(37,211,102,0.15);}
+.wa-title{font-size:0.65rem;color:#25d366;letter-spacing:0.1em;text-transform:uppercase;}
+.wa-sub{font-size:0.55rem;color:var(--muted);margin-top:1px;}
+.wa-body{padding:12px 14px;display:flex;flex-direction:column;gap:9px;}
+.wa-label{font-size:0.55rem;letter-spacing:0.15em;color:var(--muted);text-transform:uppercase;display:flex;align-items:center;gap:5px;}
+.wa-badge{background:rgba(37,211,102,0.15);border:1px solid rgba(37,211,102,0.35);color:#25d366;font-size:0.48rem;padding:1px 6px;border-radius:10px;}
+.wa-input{background:var(--panel2);border:1px solid var(--b);border-radius:5px;padding:7px 10px;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:0.72rem;outline:none;transition:border-color .2s;width:100%;}
+.wa-input:focus{border-color:rgba(37,211,102,0.5);}
+textarea.wa-input{resize:vertical;min-height:80px;line-height:1.6;}
+.wa-actions{display:flex;gap:8px;flex-wrap:wrap;}
+.wa-btn{padding:7px 16px;border-radius:5px;font-family:'Share Tech Mono',monospace;font-size:0.65rem;cursor:pointer;transition:all .2s;letter-spacing:0.06em;}
+.wa-btn.send{background:rgba(37,211,102,0.12);border:1px solid rgba(37,211,102,0.45);color:#25d366;}
+.wa-btn.send:hover{background:rgba(37,211,102,0.28);box-shadow:0 0 10px rgba(37,211,102,0.25);}
+.wa-btn.ai{background:rgba(176,96,255,0.1);border:1px solid rgba(176,96,255,0.4);color:var(--purple);}
+.wa-btn.ai:hover{background:rgba(176,96,255,0.22);}
+.wa-btn.cancel{background:transparent;border:1px solid var(--b);color:var(--muted);}
+.wa-btn.cancel:hover{border-color:rgba(255,45,107,0.4);color:var(--red);}
+.wa-status{font-size:0.62rem;min-height:18px;}
+.wa-status.ok{color:#25d366;}
+.wa-status.err{color:var(--red);}
+.wa-status.info{color:var(--cyan);}
+.wa-generating{display:flex;align-items:center;gap:8px;font-size:0.65rem;color:var(--purple);padding:4px 0;}
+.wa-dot{width:5px;height:5px;border-radius:50%;background:var(--purple);animation:pu 0.6s infinite;}
+.wa-dot:nth-child(2){animation-delay:.15s;}
+.wa-dot:nth-child(3){animation-delay:.3s;}
+
+/* ── YOUTUBE PLAYER CARD ─────────────────────────────────── */
+.yt-card{margin-top:10px;border-radius:10px;overflow:hidden;border:1px solid rgba(255,0,0,0.3);background:rgba(255,0,0,0.04);}
+.yt-header{display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(255,0,0,0.08);border-bottom:1px solid rgba(255,0,0,0.15);}
+.yt-logo{font-size:1rem;}
+.yt-title{font-size:0.65rem;color:#ff4444;letter-spacing:0.1em;text-transform:uppercase;}
+.yt-song{font-size:0.7rem;color:var(--text);margin-top:1px;}
+.yt-btns{display:flex;gap:6px;padding:10px 12px;flex-wrap:wrap;}
+.yt-btn{padding:6px 14px;border-radius:5px;border:1px solid rgba(255,80,80,0.4);background:rgba(255,0,0,0.1);color:#ff6060;font-family:'Share Tech Mono',monospace;font-size:0.65rem;cursor:pointer;transition:all .2s;letter-spacing:0.08em;}
+.yt-btn:hover{background:rgba(255,0,0,0.25);border-color:rgba(255,80,80,0.8);color:#fff;box-shadow:0 0 10px rgba(255,50,50,0.3);}
+.yt-btn.primary{background:rgba(255,0,0,0.25);border-color:rgba(255,80,80,0.7);color:#fff;}
+.yt-btn.primary:hover{background:rgba(255,0,0,0.45);}
+.yt-status{padding:0 12px 10px;font-size:0.6rem;color:var(--muted);}
+
+.right{display:flex;flex-direction:column;gap:12px;max-height:calc(100vh - 120px);overflow-y:auto;}
+.cat{background:var(--panel);border:1px solid var(--b);border-radius:9px;overflow:hidden;}
+.cat-h{padding:9px 13px;font-size:0.58rem;letter-spacing:0.22em;color:var(--cyan);text-transform:uppercase;border-bottom:1px solid var(--b);display:flex;align-items:center;gap:7px;cursor:pointer;background:rgba(0,229,255,0.025);user-select:none;}
+.cat-h:hover{background:rgba(0,229,255,0.055);}
+.cat-b{padding:8px 12px;display:flex;flex-direction:column;gap:5px;}
+.cat-b.hidden{display:none;}
+.ci{padding:5px 9px;border-radius:5px;font-size:0.65rem;color:var(--muted);cursor:pointer;transition:all .15s;border:1px solid transparent;display:flex;align-items:center;gap:7px;}
+.ci:hover{background:rgba(0,229,255,0.055);border-color:rgba(0,229,255,0.1);color:var(--text);}
+.ci .ico{font-size:0.78rem;}
+.ci .smp{color:var(--cyan);font-size:0.62rem;}
+.lang-sel{display:flex;gap:6px;align-items:center;}
+.lang-btn{padding:4px 11px;border:1px solid rgba(0,229,255,0.3);border-radius:5px;background:transparent;color:var(--muted);font-size:0.58rem;letter-spacing:0.1em;cursor:pointer;transition:all .2s;text-transform:uppercase;font-family:'Share Tech Mono',monospace;}
+.lang-btn.active{border-color:var(--cyan);color:var(--cyan);background:rgba(0,229,255,0.1);box-shadow:0 0 10px rgba(0,229,255,0.3);}
+.lang-btn:hover{border-color:var(--cyan);color:var(--cyan);}
+.sbar{width:100%;max-width:1150px;display:flex;align-items:center;gap:9px;padding:7px 28px;font-size:0.6rem;color:var(--muted);border-top:1px solid var(--b);position:relative;z-index:10;margin-top:auto;}
+.sdot{width:6px;height:6px;border-radius:50%;background:var(--muted);flex-shrink:0;}
+.sdot.ok{background:var(--green);box-shadow:0 0 5px var(--green);animation:pu 2s infinite;}
+.sdot.li{background:var(--cyan);box-shadow:0 0 5px var(--cyan);animation:pu .8s infinite;}
+.sdot.er{background:var(--red);}
+@keyframes pu{0%,100%{opacity:1}50%{opacity:.3}}
+.stxt{color:var(--cyan);}
+.srt{margin-left:auto;color:#253545;}
+.srv-indicator{display:inline-flex;align-items:center;gap:5px;font-size:0.58rem;padding:2px 9px;border-radius:12px;border:1px solid var(--b);}
+.srv-indicator.connected{border-color:rgba(0,255,157,0.3);color:var(--green);}
+.srv-indicator.disconnected{border-color:rgba(255,45,107,0.3);color:var(--red);}
+.srv-dot{width:5px;height:5px;border-radius:50%;background:currentColor;}
+.server-warn{background:rgba(255,183,0,0.08);border:1px solid rgba(255,183,0,0.25);border-radius:8px;padding:12px 16px;font-size:0.7rem;line-height:1.7;color:var(--amber);width:100%;}
+.server-warn code{background:rgba(0,0,0,0.3);padding:1px 6px;border-radius:3px;font-family:'Share Tech Mono',monospace;color:var(--cyan);}
+::-webkit-scrollbar{width:3px;}
+::-webkit-scrollbar-thumb{background:var(--b);border-radius:2px;}
+.wake-hint{font-size:0.57rem;color:var(--muted);letter-spacing:0.1em;text-align:center;}
+.wake-hint span{color:var(--cyan);}
+</style>
+</head>
+<body>
+<div class="grid-bg"></div>
+<div class="scanline"></div>
+
+<div class="hdr">
+  <div class="logo">NEXUS</div>
+  <div style="display:flex;gap:20px;align-items:center;">
+    <div class="badges">
+      <div class="srv-indicator disconnected" id="srv-ind"><span class="srv-dot"></span><span id="srv-txt">Server Offline</span></div>
+      <div class="badge" id="os-badge">Detecting...</div>
+      <div class="badge" id="state-badge">IDLE</div>
+    </div>
+    <div class="lang-sel">
+      <span style="font-size:0.58rem;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;">Lang:</span>
+      <button class="lang-btn active" id="lang-en" onclick="setLanguage('en')">EN</button>
+      <button class="lang-btn" id="lang-hi" onclick="setLanguage('hi')">HI</button>
+    </div>
+  </div>
+</div>
+
+<div class="main">
+  <div class="left">
+    <div class="orb-w" onclick="manualToggle()">
+      <div class="ring r1"></div><div class="ring r2"></div>
+      <div class="ring r3"></div><div class="ring r4"></div>
+      <div class="odot"></div><div class="odot"></div><div class="odot"></div>
+      <div class="orb-core" id="orb"><span class="orb-ico" id="oico">👆</span><span class="orb-lbl" id="olbl">TAP TO START</span></div>
+    </div>
+    <div class="wf" id="wf"></div>
+    <div class="wake-hint">Say <span>"Hey Nexus"</span> to wake · Tap orb to pause</div>
+    <div style="width:100%">
+      <div class="tx-lbl">// You Said</div>
+      <div class="tx-txt empty" id="tx">Tap the orb to begin voice control...</div>
+    </div>
+    <div class="resp-box" style="width:100%">
+      <div class="resp-txt" id="resp">Ready. Tap the orb, then speak a command.</div>
+      <div class="out-x" id="outx"></div>
+    </div>
+    <div class="server-warn" id="srv-warn" style="display:none">
+      ⚠ <strong>Python server not running.</strong> To enable full laptop control:<br><br>
+      1. Save <code>nexus_server.py</code> on your laptop<br>
+      2. Open Terminal / Command Prompt<br>
+      3. Run: <code>python nexus_server.py</code><br>
+      4. Keep it running, then reload this page<br><br>
+      <span style="color:var(--muted)">Voice commands for web and media still work without the server.</span>
+    </div>
+  </div>
+  <div class="right" id="sidebar"></div>
+</div>
+
+<div class="sbar">
+  <div class="sdot" id="sdot"></div>
+  <span class="stxt" id="stxt">Initializing...</span>
+  <span class="srt" id="srt">Open nexus_server.py on your laptop for full system control</span>
+</div>
+
+<script>
+// Auto-detect server URL — works on localhost AND via Cloudflare Tunnel
+// Auto-detect: localhost = direct, cloud = use token from URL
+const _isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+const SERVER = _isLocal ? 'http://localhost:9999' : location.origin;
+// Token for cloud mode (from URL ?token=xxx or saved)
+const _urlToken = new URLSearchParams(location.search).get('token') || localStorage.getItem('nexus_token') || '';
+if (_urlToken && !_isLocal) localStorage.setItem('nexus_token', _urlToken);
+// Add token to all requests in cloud mode
+const _getHeaders = () => _isLocal ? {} : {'X-Agent-Token': _urlToken};
+
+let serverOnline = false;
+
+const ua = navigator.userAgent;
+const isWin = /Windows/.test(ua);
+const isMac = /Mac/.test(ua) && !/iPhone/.test(ua);
+const OS = isWin?'Windows':isMac?'macOS':'Linux';
+document.getElementById('os-badge').textContent = isWin?'🪟 Windows':isMac?'🍎 macOS':'🐧 Linux';
+
+async function checkServer(){
+  try{
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 1500);
+    const r = await fetch(SERVER+'/ping',{signal:controller.signal});
+    clearTimeout(timeoutId);
+    const d = await r.json();
+    serverOnline = true;
+    const si = document.getElementById('srv-ind');
+    si.className='srv-indicator connected';
+    document.getElementById('srv-txt').textContent='Server Online ✓';
+    document.getElementById('srv-warn').style.display='none';
+    document.getElementById('srt').textContent=`Connected to NEXUS server · OS: ${d.os}`;
+    // Start WA monitor as soon as server is online
+    if(typeof startWAMonitor === 'function' && !waMonitorActive) startWAMonitor();
+  } catch{
+    serverOnline = false;
+    const si=document.getElementById('srv-ind');
+    si.className='srv-indicator disconnected';
+    document.getElementById('srv-txt').textContent='Server Offline';
+    if(started) document.getElementById('srv-warn').style.display='block';
+  }
+}
+setInterval(checkServer, 4000);
+checkServer();
+
+// ── REAL-TIME WHATSAPP NOTIFICATION MONITOR ──────────────────
+let waMonitorActive = false;
+
+async function startWAMonitor(){
+  if(waMonitorActive) return;
+  if(!serverOnline) return;
+  try{
+    await execCmd('wa_monitor_start',{});
+    waMonitorActive = true;
+    // Poll every 6 seconds for new notifications
+    setInterval(async ()=>{
+      if(!serverOnline || !waMonitorActive) return;
+      try{
+        const res = await execCmd('wa_poll_notif',{});
+        let data;
+        try{ data = typeof res.message==='string' ? JSON.parse(res.message) : res; }catch(e){ data=res; }
+        if(data.has_notif && data.message){
+          // Show notification banner + speak it
+          showWANotifBanner(data.message);
+          speak(`WhatsApp notification: ${data.message}`);
+        }
+      }catch(e){}
+    }, 6000);
+  }catch(e){}
+}
+
+function showWANotifBanner(msg){
+  // Create floating notification
+  const old = document.getElementById('wa-notif-banner');
+  if(old) old.remove();
+  const div = document.createElement('div');
+  div.id = 'wa-notif-banner';
+  div.style.cssText = `
+    position:fixed;top:18px;right:18px;z-index:9999;
+    background:rgba(18,22,30,0.97);border:1px solid rgba(37,211,102,0.5);
+    border-radius:10px;padding:12px 16px;max-width:300px;
+    box-shadow:0 0 24px rgba(37,211,102,0.2);
+    font-family:'Share Tech Mono',monospace;animation:fadeInRight .3s ease;
+  `;
+  div.innerHTML = `
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+      <span style="font-size:1.1rem">💬</span>
+      <span style="font-size:0.6rem;color:#25d366;letter-spacing:0.1em;text-transform:uppercase">WhatsApp Notification</span>
+      <span onclick="this.parentElement.parentElement.remove()" style="margin-left:auto;cursor:pointer;color:#666;font-size:0.7rem">✕</span>
+    </div>
+    <div style="font-size:0.72rem;color:#e0e0e0;line-height:1.5">${msg}</div>
+  `;
+  document.body.appendChild(div);
+  // Auto remove after 8 seconds
+  setTimeout(()=>{ if(div.parentElement) div.remove(); }, 8000);
+}
+
+// Start monitor when server comes online
+const _origCheckServer = checkServer;
+checkServer = async function(){
+  await _origCheckServer();
+  if(serverOnline && !waMonitorActive) startWAMonitor();
+};
+
+async function execCmd(action, args={}){
+  if(!serverOnline) return {ok:false, message:'Server offline. Run nexus_agent.py on your laptop.'};
+  try{
+    const qs = new URLSearchParams({action, ...args}).toString();
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+    const r = await fetch(`${SERVER}/cmd?${qs}`,{signal:controller.signal, headers: _getHeaders()});
+    clearTimeout(timeoutId);
+    return await r.json();
+  }catch(e){return {ok:false, message:'Server error: '+e.message};}
+}
+
+// ═══ SIDEBAR CATEGORIES ══════════════════════════════════════
+const CATS = [
+  {icon:'🎵',label:'Music & Media',open:true,cmds:[
+    {ico:'▶',smp:'"play Believer on YouTube"',run:()=>processCommand('play believer on youtube')},
+    {ico:'🎧',smp:'"play lo-fi on Spotify"',run:()=>processCommand('play lo fi on spotify')},
+    {ico:'🔊',smp:'"volume up"',run:()=>processCommand('volume up')},
+    {ico:'🔉',smp:'"volume down"',run:()=>processCommand('volume down')},
+    {ico:'🔇',smp:'"mute"',run:()=>processCommand('mute')},
+  ]},
+  {icon:'⚙️',label:'System Settings',open:true,cmds:[
+    {ico:'📶',smp:'"open WiFi settings"',run:()=>processCommand('open wifi settings')},
+    {ico:'🔵',smp:'"open Bluetooth"',run:()=>processCommand('open bluetooth')},
+    {ico:'🖥',smp:'"open display settings"',run:()=>processCommand('open display settings')},
+    {ico:'🔊',smp:'"open sound settings"',run:()=>processCommand('open sound settings')},
+    {ico:'🔆',smp:'"brightness up / down"',run:()=>processCommand('brightness up')},
+    {ico:'🌙',smp:'"dark mode"',run:()=>processCommand('dark mode')},
+    {ico:'🔒',smp:'"lock screen"',run:()=>processCommand('lock screen')},
+    {ico:'😴',smp:'"sleep mode"',run:()=>processCommand('sleep mode')},
+    {ico:'⏻',smp:'"shutdown"',run:()=>processCommand('shut down computer')},
+    {ico:'🔄',smp:'"restart"',run:()=>processCommand('restart computer')},
+    {ico:'📋',smp:'"task manager"',run:()=>processCommand('open task manager')},
+    {ico:'⚙️',smp:'"open settings"',run:()=>processCommand('open settings')},
+  ]},
+  {icon:'📁',label:'Files & Folders',open:false,cmds:[
+    {ico:'📂',smp:'"open file explorer"',run:()=>processCommand('open file explorer')},
+    {ico:'⬇️',smp:'"open downloads folder"',run:()=>processCommand('open downloads folder')},
+    {ico:'📄',smp:'"open documents folder"',run:()=>processCommand('open documents folder')},
+    {ico:'🖥',smp:'"open desktop folder"',run:()=>processCommand('open desktop folder')},
+    {ico:'🖼',smp:'"open pictures folder"',run:()=>processCommand('open pictures folder')},
+    {ico:'🎬',smp:'"open videos folder"',run:()=>processCommand('open videos folder')},
+    {ico:'🎵',smp:'"open music folder"',run:()=>processCommand('open music folder')},
+    {ico:'🗑',smp:'"open recycle bin"',run:()=>processCommand('open recycle bin')},
+    {ico:'💾',smp:'"open C drive"',run:()=>processCommand('open c drive')},
+    {ico:'🔍',smp:'"search files for resume"',run:()=>processCommand('search files for resume')},
+  ]},
+  {icon:'💻',label:'Applications',open:false,cmds:[
+    {ico:'📝',smp:'"open Notepad"',run:()=>processCommand('open notepad')},
+    {ico:'🔢',smp:'"open Calculator"',run:()=>processCommand('open calculator')},
+    {ico:'🎨',smp:'"open Paint"',run:()=>processCommand('open paint')},
+    {ico:'📅',smp:'"open Calendar"',run:()=>processCommand('open calendar')},
+    {ico:'🖼',smp:'"open Photos"',run:()=>processCommand('open photos')},
+    {ico:'📸',smp:'"open Camera"',run:()=>processCommand('open camera')},
+    {ico:'📘',smp:'"open Word"',run:()=>processCommand('open word')},
+    {ico:'📗',smp:'"open Excel"',run:()=>processCommand('open excel')},
+    {ico:'📙',smp:'"open PowerPoint"',run:()=>processCommand('open powerpoint')},
+    {ico:'💻',smp:'"open Terminal"',run:()=>processCommand('open terminal')},
+    {ico:'🔲',smp:'"open PowerShell"',run:()=>processCommand('open powershell')},
+    {ico:'✂️',smp:'"open Snipping Tool"',run:()=>processCommand('open snipping tool')},
+    {ico:'📸',smp:'"take screenshot"',run:()=>processCommand('take screenshot')},
+    {ico:'🎮',smp:'"open VS Code"',run:()=>processCommand('open vscode')},
+    {ico:'🎵',smp:'"open Spotify"',run:()=>processCommand('open spotify app')},
+    {ico:'💬',smp:'"open WhatsApp"',run:()=>processCommand('open whatsapp')},
+    {ico:'📹',smp:'"open Zoom"',run:()=>processCommand('open zoom')},
+    {ico:'🎭',smp:'"open Discord"',run:()=>processCommand('open discord')},
+    {ico:'📨',smp:'"open Telegram"',run:()=>processCommand('open telegram')},
+    {ico:'🎬',smp:'"open VLC"',run:()=>processCommand('open vlc')},
+    {ico:'📧',smp:'"open Mail"',run:()=>processCommand('open mail')},
+  ]},
+  {icon:'⌨️',label:'Keyboard Shortcuts',open:false,cmds:[
+    {ico:'📋',smp:'"copy"',run:()=>processCommand('copy')},
+    {ico:'📋',smp:'"paste"',run:()=>processCommand('paste')},
+    {ico:'✂️',smp:'"cut"',run:()=>processCommand('cut')},
+    {ico:'↩️',smp:'"undo"',run:()=>processCommand('undo')},
+    {ico:'↪️',smp:'"redo"',run:()=>processCommand('redo')},
+    {ico:'💾',smp:'"save file"',run:()=>processCommand('save file')},
+    {ico:'🔍',smp:'"find on page"',run:()=>processCommand('find on page')},
+    {ico:'☑️',smp:'"select all"',run:()=>processCommand('select all')},
+    {ico:'🔄',smp:'"switch window"',run:()=>processCommand('switch window')},
+    {ico:'⬇️',smp:'"minimize window"',run:()=>processCommand('minimize window')},
+    {ico:'⬆️',smp:'"maximize window"',run:()=>processCommand('maximize window')},
+    {ico:'❌',smp:'"close window"',run:()=>processCommand('close window')},
+    {ico:'➕',smp:'"new tab"',run:()=>processCommand('new tab')},
+    {ico:'❌',smp:'"close tab"',run:()=>processCommand('close tab')},
+    {ico:'🖨️',smp:'"print"',run:()=>processCommand('print')},
+  ]},
+  {icon:'📧',label:'Email (AI)',open:false,cmds:[
+    {ico:'🤖',smp:'"compose email"',run:()=>processCommand('compose email')},
+    {ico:'📤',smp:'"send email to abc@gmail.com about meeting"',run:()=>processCommand('compose email')},
+    {ico:'🙏',smp:'"email to xyz@gmail.com about thank you"',run:()=>processCommand('compose email')},
+    {ico:'📋',smp:'"send email about project update"',run:()=>processCommand('compose email')},
+  ]},
+  {icon:'👥',label:'Contacts',open:true,cmds:[
+    {ico:'➕',smp:'"add contact"',run:()=>showContactManager()},
+    {ico:'📋',smp:'"show contacts"',run:()=>processCommand('show contacts')},
+    {ico:'📧',smp:'"send email to Rahul about meeting"',run:()=>processCommand('send email to rahul about meeting')},
+  ]},
+  {icon:'💬',label:'WhatsApp',open:true,cmds:[
+    {ico:'📱',smp:'"open WhatsApp"',run:()=>processCommand('open whatsapp')},
+    {ico:'💬',smp:'"whatsapp Rahul kal milte hain"',run:()=>processCommand('whatsapp rahul about meeting')},
+    {ico:'📞',smp:'"whatsapp call Rahul"',run:()=>processCommand('whatsapp call rahul')},
+    {ico:'📹',smp:'"video call Priya whatsapp"',run:()=>processCommand('video call priya whatsapp')},
+    {ico:'✅',smp:'"receive call"',run:()=>processCommand('receive call')},
+    {ico:'📵',smp:'"end call"',run:()=>processCommand('end call')},
+    {ico:'🔔',smp:'"check whatsapp messages"',run:()=>processCommand('check whatsapp')},
+  ]},
+  {icon:'🛠',label:'Utilities',open:false,cmds:[
+    {ico:'🕐',smp:'"what time is it"',run:()=>processCommand('what time is it')},
+    {ico:'📅',smp:'"what day is today"',run:()=>processCommand('what day is today')},
+    {ico:'🔋',smp:'"battery status"',run:()=>processCommand('battery status')},
+    {ico:'🔢',smp:'"calculate 25 times 4"',run:()=>processCommand('calculate 25 times 4')},
+    {ico:'⏱',smp:'"set timer 5 minutes"',run:()=>processCommand('set timer 5 minutes')},
+    {ico:'🌤',smp:'"weather today"',run:()=>processCommand('weather today')},
+    {ico:'📝',smp:'"write a note: meeting at 3"',run:()=>processCommand('write a note meeting at 3')},
+    {ico:'📋',smp:'"show my notes"',run:()=>processCommand('show my notes')},
+    {ico:'😄',smp:'"tell me a joke"',run:()=>processCommand('tell me a joke')},
+  ]},
+];
+
+const sidebar = document.getElementById('sidebar');
+CATS.forEach(cat => {
+  const el = document.createElement('div'); el.className='cat';
+  const h = document.createElement('div'); h.className='cat-h';
+  const body = document.createElement('div'); body.className='cat-b'+(cat.open?'':' hidden');
+  h.innerHTML=`<span>${cat.icon}</span><span>${cat.label}</span><span style="margin-left:auto;opacity:.4;font-size:.65rem">▾</span>`;
+  h.onclick=()=>body.classList.toggle('hidden');
+  cat.cmds.forEach(c=>{
+    const ci=document.createElement('div'); ci.className='ci';
+    ci.innerHTML=`<span class="ico">${c.ico}</span><span class="smp">${c.smp}</span>`;
+    ci.onclick=()=>{
+      const sample=c.smp.replace(/['"]/g,'');
+      document.getElementById('tx').textContent=sample;
+      document.getElementById('tx').classList.remove('empty');
+      c.run();
+    };
+    body.appendChild(ci);
+  });
+  el.appendChild(h); el.appendChild(body);
+  sidebar.appendChild(el);
+});
+
+// ═══ WAVEFORM ════════════════════════════════════════════════
+const wfEl=document.getElementById('wf');
+const NB=42; const wbs=[];
+for(let i=0;i<NB;i++){const b=document.createElement('div');b.className='wb';wfEl.appendChild(b);wbs.push(b);}
+let wfAnim=null;
+function startWave(c='#00e5ff'){wbs.forEach(b=>b.style.background=c);clearInterval(wfAnim);wfAnim=setInterval(()=>wbs.forEach(b=>{b.style.height=(Math.random()*32+3)+'px';}),80);}
+function stopWave(){clearInterval(wfAnim);wbs.forEach(b=>b.style.height='3px');}
+
+const orbEl=document.getElementById('orb'),oiEl=document.getElementById('oico'),olEl=document.getElementById('olbl');
+const txEl=document.getElementById('tx'),respEl=document.getElementById('resp'),outxEl=document.getElementById('outx');
+const sdotEl=document.getElementById('sdot'),stxtEl=document.getElementById('stxt');
+let manPause=false,isRec=false,restTO=null,timerI=null,curState='idle',started=false;
+
+function setState(s){
+  curState=s;orbEl.className='orb-core '+s;
+  document.getElementById('state-badge').textContent=s.toUpperCase();
+  sdotEl.className='sdot';
+  if(s==='idle'){oiEl.textContent='🎙️';olEl.textContent='READY';stopWave();sdotEl.classList.add('ok');stxtEl.textContent='Ready — listening for commands';}
+  if(s==='listening'){oiEl.textContent='🔴';olEl.textContent='LISTENING';startWave('#00e5ff');sdotEl.className='sdot li';stxtEl.textContent='Listening...';}
+  if(s==='processing'){oiEl.textContent='⚡';olEl.textContent='PROCESSING';stopWave();startWave('#ffb700');stxtEl.textContent='Processing command...';}
+  if(s==='speaking'){oiEl.textContent='🔊';olEl.textContent='SPEAKING';stopWave();startWave('#00ff9d');stxtEl.textContent='Speaking...';}
+  if(s==='error'){oiEl.textContent='🚫';olEl.textContent='ERROR';stopWave();sdotEl.classList.add('er');stxtEl.textContent='Error — check microphone permission';}
+}
+
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+let rec=null;
+
+function buildRec(){
+  if(!SR)return null;
+  const r=new SR();
+  r.continuous=false;r.interimResults=true;
+  // Hindi+English dono support
+  r.lang=currentLanguage==='hi'?'hi-IN':'en-IN';
+  r.maxAlternatives=3;
+  r.onstart=()=>{isRec=true;if(!manPause)setState('listening');};
+  r.onresult=(e)=>{
+    let interim='',final='';
+    for(let i=e.resultIndex;i<e.results.length;i++){
+      const t=e.results[i][0].transcript;
+      if(e.results[i].isFinal)final+=t;else interim+=t;
+    }
+    const d=final||interim;
+    if(d){txEl.textContent=d;txEl.classList.remove('empty');}
+    if(final.trim()){
+      const cmd=final.trim().toLowerCase();
+      if(manPause){if(/hey nexus|nexus wake|wake up/.test(cmd)){manPause=false;schedRestart(200);}return;}
+      setState('processing');
+      setTimeout(()=>processCommand(cmd),200);
+    }
+  };
+  r.onerror=(e)=>{
+    isRec=false;
+    if(e.error==='not-allowed'){setState('error');respEl.textContent='Microphone blocked. Please allow microphone in browser settings.';return;}
+    if(!manPause)schedRestart(700);
+  };
+  r.onend=()=>{isRec=false;if(!manPause&&curState!=='speaking'&&curState!=='processing')schedRestart(350);};
+  return r;
+}
+
+function startRec(){if(isRec||manPause)return;try{rec.start();}catch(e){schedRestart(800);}}
+function stopRec(){try{rec.stop();}catch(e){}isRec=false;}
+function schedRestart(ms=350){clearTimeout(restTO);restTO=setTimeout(()=>{if(!manPause&&!isRec&&curState!=='speaking'){setState('listening');startRec();}},ms);}
+
+let speechUnlocked=false;
+function unlockSpeech(){
+  if(speechUnlocked||!window.speechSynthesis)return;
+  speechUnlocked=true;
+  const s=new SpeechSynthesisUtterance(' ');s.volume=0;speechSynthesis.speak(s);
+}
+if(window.speechSynthesis){speechSynthesis.onvoiceschanged=()=>speechSynthesis.getVoices();speechSynthesis.getVoices();}
+
+let currentLanguage='en';
+localStorage.getItem('nexus-lang')&&(currentLanguage=localStorage.getItem('nexus-lang'));
+function setLanguage(lang){
+  currentLanguage=lang;localStorage.setItem('nexus-lang',lang);
+  document.getElementById('lang-en').classList.toggle('active',lang==='en');
+  document.getElementById('lang-hi').classList.toggle('active',lang==='hi');
+  respond(lang==='en'?'Language changed to English.':'भाषा हिंदी में बदल दी गई है।');
+}
+document.getElementById('lang-en').classList.toggle('active',currentLanguage==='en');
+document.getElementById('lang-hi').classList.toggle('active',currentLanguage==='hi');
+
+function speak(text,cb){
+  if(!window.speechSynthesis){if(cb)cb();return;}
+  speechSynthesis.cancel();setState('speaking');
+  function doSpeak(){
+    const u=new SpeechSynthesisUtterance(text);
+    u.rate=1.0;u.pitch=0.88;u.volume=1.0;
+    const voices=speechSynthesis.getVoices();
+    let v;
+    if(currentLanguage==='hi'){
+      v=voices.find(v=>/hindi/i.test(v.lang)||/hi-IN|hi_IN/i.test(v.lang))||voices.find(v=>/^hi/i.test(v.lang))||voices.find(v=>v.lang.startsWith('hi'))||voices[0];
+    }else{
+      v=voices.find(v=>/google us English|microsoft zira|microsoft david|alex|samantha|karen|daniel|moira/i.test(v.name))||voices.find(v=>v.lang==='en-US')||voices[0];
+    }
+    if(v){u.voice=v;}else if(currentLanguage==='hi'){u.lang='hi-IN';}
+    u.onend=u.onerror=()=>{if(cb)cb();setState('idle');if(!manPause)schedRestart(450);};
+    speechSynthesis.speak(u);
+  }
+  speechSynthesis.getVoices().length===0?setTimeout(doSpeak,350):doSpeak();
+}
+
+function respond(text,extraHtml=''){
+  respEl.textContent=text;
+  outxEl.innerHTML=extraHtml;
+  speak(text);
+}
+
+function respondCard(text,ico,title,sub,cardClass=''){
+  respond(text,`<div class="ac ${cardClass}"><span class="ac-ico">${ico}</span><div><div class="ac-title">${title}</div><div class="ac-sub">${sub}</div></div></div>`);
+}
+
+function t(en,hi){return currentLanguage==='hi'?hi:en;}
+
+async function doCmd(action, args={}, text, ico, title, sub){
+  if(serverOnline){
+    const res = await execCmd(action, args);
+    if(res.ok){
+      respondCard(text||res.message, ico||'✅', title||'Done', sub||res.message, 'success');
+    } else {
+      respondCard(res.message, '⚠️', 'Server Error', 'Is nexus_server.py running?', 'error');
+    }
+  } else {
+    respondCard('Server not running. Please start nexus_server.py on your laptop to control system apps.','⚠️','Server Offline','Run: python nexus_server.py','error');
+  }
+}
+
+function fmtT(s){const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sc=s%60,p=n=>String(n).padStart(2,'0');return h?`${p(h)}:${p(m)}:${p(sc)}`:`${p(m)}:${p(sc)}`;}
+function runTimer(total){
+  if(timerI)clearInterval(timerI);let rem=total;
+  outxEl.innerHTML=`<div class="timer-big">${fmtT(rem)}</div>`;
+  timerI=setInterval(()=>{rem--;outxEl.innerHTML=`<div class="timer-big" style="color:${rem<10?'var(--red)':'var(--cyan)'}">${fmtT(rem)}</div>`;
+    if(rem<=0){clearInterval(timerI);respond('Timer complete! Time is up!');outxEl.innerHTML=`<div class="timer-big" style="color:var(--green)">DONE ✓</div>`;}},1000);
+}
+
+// ═══ YOUTUBE PLAYER FUNCTION — KEY UPGRADE ═══════════════════
+// Shows a mini player card with direct play button + auto-opens
+function playOnYouTube(songName) {
+  const searchQuery = encodeURIComponent(songName);
+  // This URL directly plays first search result on YouTube
+  const autoplayURL = `https://www.youtube.com/results?search_query=${searchQuery}`;
+
+  const cardHtml = `
+    <div class="yt-card">
+      <div class="yt-header">
+        <span class="yt-logo">▶️</span>
+        <div>
+          <div class="yt-title">YouTube Music Player</div>
+          <div class="yt-song">🎵 ${songName}</div>
+        </div>
+      </div>
+      <div class="yt-btns">
+        <button class="yt-btn primary" onclick="window.open('${autoplayURL}','_blank')">
+          ▶ Play on YouTube
+        </button>
+        <button class="yt-btn" onclick="window.open('${ytMusicURL}','_blank')">
+          🎵 YouTube Music
+        </button>
+        <button class="yt-btn" onclick="window.open('https://open.spotify.com/search/${encodeURIComponent(songName)}','_blank')">
+          💚 Spotify
+        </button>
+      </div>
+      <div class="yt-status">🔴 LIVE · Click ▶ Play on YouTube to start song instantly</div>
+    </div>`;
+
+  respEl.textContent = `Playing ${songName} on YouTube now!`;
+  outxEl.innerHTML = cardHtml;
+  speak(`Playing ${songName} on YouTube.`);
+
+  // Auto-open YouTube and click first video after 1.5 seconds
+  setTimeout(() => {
+    window.open(autoplayURL, '_blank') || (window.location.href = autoplayURL);
+  }, 1500);
+
+  // After YouTube opens, click first video via server
+  setTimeout(async () => {
+    await execCmd('youtube_click_first', {});
+  }, 4000);
+}
+
+// ═══ MAIN COMMAND PROCESSOR ══════════════════════════════════
+async function processCommand(cmd){
+  txEl.textContent=cmd;txEl.classList.remove('empty');
+
+  try{
+    const raw=(txEl.textContent||'').toLowerCase();
+    const m=raw.match(/\bi am (alexa)\b/)||raw.match(/\bcall me (alexa)\b/)||raw.match(/^\s*(hey alexa|hey siri|hey google|assistant|jarvis)\s*$/);
+    if(m){
+      const name=m[1]||m[0];
+      const cap=name.charAt(0).toUpperCase()+name.slice(1);
+      return respond(`I am Nexus, not ${cap}. Say "Hey Nexus" to wake me.`);
+    }
+  }catch(e){}
+
+  if(/^(hello|hi\b|hey\b|howdy|good (morning|afternoon|evening))/.test(cmd)){
+    const h=new Date().getHours();const g=h<12?'Good morning':h<17?'Good afternoon':'Good evening';
+    return respond(`${g}! I am Nexus. I control your entire laptop by voice!`);
+  }
+
+  if(/\b(how are you|how you doing|how you|what is up|whats up|how's it going|how is it going)\b/.test(cmd)){
+    const responses=['I am good and ready to help with your laptop!','I am great! Always ready to assist you.','I am doing very well! What can I help you with today?','I am excellent! Let me know what you need.'];
+    return respond(responses[Math.floor(Math.random()*responses.length)]);
+  }
+
+  if(/\b(what is my daily routine|daily schedule|my routine|what should i do today|daily activity|daily activities|today\'s plan|what am i doing today)\b/.test(cmd)){
+    return respond('I can open your calendar, set reminders and timers, search your tasks, open applications, and control your laptop settings. What would you like to do?');
+  }
+
+  if(/\b(tell me a joke|funny|make me laugh)\b/.test(cmd)){
+    const jokes=['Why do programmers prefer dark mode? Because light attracts bugs!','How many programmers does it take to change a lightbulb? None, that is a hardware problem!','Why did the laptop go to therapy? It had too many emotional bytes!','What do you call a singing computer? A Dell!'];
+    return respond(jokes[Math.floor(Math.random()*jokes.length)]);
+  }
+
+  if(/\b(thank you|thanks|thank you nexus|appreciate it)\b/.test(cmd)){
+    const responses=['You are welcome! Always happy to help.','Happy to assist! Keep using voice commands.','Anytime! That is what I am here for.'];
+    return respond(responses[Math.floor(Math.random()*responses.length)]);
+  }
+
+  if(/\b(what is your name|who are you|tell me your name|your name)\b/.test(cmd)){
+    return respond('My name is Nexus! I am your personal laptop voice control assistant.');
+  }
+
+  if(/\b(what is your father|father name|who is your father|who created you|who made you)\b/.test(cmd)){
+    return respond('I was created by Gautam! I am powered by Python and JavaScript to be your digital voice assistant.');
+  }
+
+  // ── MUSIC — UPGRADED WITH AUTO-PLAY YOUTUBE CARD ──────────
+  if(/\b(play|listen to)\b/.test(cmd) && !/display|replay/.test(cmd)){
+    // Extract song name — strip platform keywords and command words
+    let song = cmd
+      .replace(/\b(play|listen to|on youtube|on spotify|on soundcloud|on apple music|youtube|spotify|soundcloud)\b/gi,'')
+      .trim();
+
+    // Detect platform
+    if(/spotify/.test(cmd)){
+      if(song){
+        respondCard(`Playing ${song} on Spotify.`,'💚',`Spotify · ${song}`,`Searching Spotify for "${song}"`,'success');
+        setTimeout(()=>window.open('https://open.spotify.com/search/'+encodeURIComponent(song),'_blank'),1200);
+      } else {
+        respond('What song would you like me to play on Spotify?');
+      }
+      return;
+    }
+
+    if(/soundcloud/.test(cmd)){
+      if(song){
+        respondCard(`Playing ${song} on SoundCloud.`,'🎵',`SoundCloud · ${song}`,song,'success');
+        setTimeout(()=>window.open('https://soundcloud.com/search?q='+encodeURIComponent(song),'_blank'),1200);
+      } else {
+        respond('What song would you like on SoundCloud?');
+      }
+      return;
+    }
+
+    // DEFAULT: YouTube — show player card + auto-open
+    if(song){
+      playOnYouTube(song);
+      return;
+    }
+
+    return respond('What song would you like me to play?');
+  }
+
+  // ── VOLUME ─────────────────────────────────────────────────
+  if(/\b(volume|louder|quieter)\b/.test(cmd)||(/\b(mute|unmute)\b/.test(cmd)&&!/compute|minute/.test(cmd))){
+    if(/\bunmute\b/.test(cmd)) return doCmd('volume_unmute',{},'Unmuting audio.','🔊','Unmute','Audio unmuted');
+    if(/\bmute\b/.test(cmd)) return doCmd('volume_mute',{},'Muting audio.','🔇','Mute','Audio muted');
+    if(/up|louder|increase|raise/.test(cmd)) return doCmd('volume_up',{},'Increasing volume.','🔊','Volume Up','Volume increased');
+    if(/down|quieter|lower|decrease|reduce/.test(cmd)) return doCmd('volume_down',{},'Decreasing volume.','🔉','Volume Down','Volume decreased');
+  }
+
+  if(/\b(brightness|dim|brighten)\b/.test(cmd)){
+    if(/up|increase|more|brighten/.test(cmd)) return doCmd('brightness_up',{},'Increasing brightness.','🔆','Brightness Up','');
+    return doCmd('brightness_down',{},'Decreasing brightness.','🔅','Brightness Down','');
+  }
+
+  if(/\bdark mode\b/.test(cmd)) return doCmd('dark_mode',{},'Switching to dark mode.','🌙','Dark Mode','Enabled');
+  if(/\blight mode\b/.test(cmd)) return doCmd('light_mode',{},'Switching to light mode.','☀️','Light Mode','Enabled');
+
+  if(/\b(lock screen|lock the screen|lock computer|lock laptop)\b/.test(cmd)) return doCmd('lock_screen',{},'Locking screen.','🔒','Lock Screen','');
+  if(/\b(sleep mode|go to sleep|put to sleep)\b/.test(cmd)) return doCmd('sleep_mode',{},'Putting laptop to sleep.','😴','Sleep Mode','');
+  if(/\b(shut down|shutdown|power off|turn off)\b/.test(cmd)) return doCmd('shutdown',{},'Shutting down in 10 seconds. Say cancel shutdown to abort.','⏻','Shutdown','10 second delay');
+  if(/\bcancel shutdown\b/.test(cmd)) return doCmd('cancel_shutdown',{},'Shutdown cancelled.','✅','Cancelled','');
+  if(/\b(restart|reboot)\b/.test(cmd)) return doCmd('restart',{},'Restarting laptop in 10 seconds.','🔄','Restart','10 second delay');
+  if(/\b(task manager|activity monitor)\b/.test(cmd)) return doCmd('task_manager',{},'Opening Task Manager.','📋','Task Manager','');
+  if(/\b(control panel)\b/.test(cmd)) return doCmd('open_control_panel',{},'Opening Control Panel.','⚙️','Control Panel','');
+  if(/\b(wifi|wi-fi|wireless|network settings)\b/.test(cmd)) return doCmd('open_wifi',{},'Opening WiFi settings.','📶','WiFi Settings','');
+  if(/\b(bluetooth)\b/.test(cmd)) return doCmd('open_bluetooth',{},'Opening Bluetooth settings.','🔵','Bluetooth Settings','');
+  if(/\b(display settings|screen settings|monitor settings)\b/.test(cmd)) return doCmd('open_display',{},'Opening display settings.','🖥','Display Settings','');
+  if(/\b(sound settings|audio settings)\b/.test(cmd)) return doCmd('open_sound',{},'Opening sound settings.','🔊','Sound Settings','');
+  if(/\b(open settings|windows settings|system settings)\b/.test(cmd)) return doCmd('open_settings',{},'Opening settings.','⚙️','Settings','');
+
+  if(/\b(file explorer|file manager|my computer|this pc|finder)\b/.test(cmd)) return doCmd('open_explorer',{},'Opening File Explorer.','📂','File Explorer','');
+
+  const folderMatch=cmd.match(/open (downloads?|documents?|desktop|pictures?|videos?|music|home) ?folder?/);
+  if(folderMatch){
+    const f=folderMatch[1].replace(/s$/,'').replace(/picture/,'pictures').replace(/download/,'downloads').replace(/document/,'documents').replace(/video/,'videos');
+    const fn=f.charAt(0).toUpperCase()+f.slice(1);
+    return doCmd('open_folder',{folder:f},`Opening ${fn} folder.`,'📂',fn+' Folder','');
+  }
+  if(/\bopen recycle bin\b|\bopen trash\b/.test(cmd)) return doCmd('open_recycle_bin',{},'Opening Recycle Bin.','🗑','Recycle Bin','');
+  const driveMatch=cmd.match(/open ([c-h]) ?drive/i);
+  if(driveMatch) return doCmd('open_drive',{drive:driveMatch[1].toUpperCase()},`Opening ${driveMatch[1].toUpperCase()} drive.`,'💾',driveMatch[1].toUpperCase()+':\\ Drive','');
+
+  if(/\b(search files|find file|search for file|locate file)\b/.test(cmd)){
+    const q=cmd.replace(/search files?|find file|search for file|locate file|for|named|called/gi,'').trim();
+    return doCmd('search_files',{query:q},`Searching files for: ${q}`,'🔍','File Search',q);
+  }
+
+  if(/\b(open notepad|open text editor)\b/.test(cmd)) return doCmd('open_notepad',{},'Opening Notepad.','📝','Notepad','');
+  if(/\b(open calculator|open calc)\b/.test(cmd)) return doCmd('open_calculator',{},'Opening Calculator.','🔢','Calculator','');
+  if(/\b(open paint|open ms paint)\b/.test(cmd)) return doCmd('open_paint',{},'Opening Paint.','🎨','Paint','');
+  if(/\b(open calendar)\b/.test(cmd)) return doCmd('open_calendar',{},'Opening Calendar.','📅','Calendar','');
+  if(/\b(open photos|open photo app)\b/.test(cmd)) return doCmd('open_photos',{},'Opening Photos.','🖼','Photos','');
+  if(/\b(open camera|open webcam)\b/.test(cmd)) return doCmd('open_camera',{},'Opening Camera.','📸','Camera','');
+  if(/\b(open mail|open email|open outlook)\b/.test(cmd)) return doCmd('open_mail',{},'Opening Mail.','📧','Mail','');
+  if(/\b(open maps|open google maps)\b/.test(cmd)&&!/website/.test(cmd)) return doCmd('open_maps',{},'Opening Maps.','🗺','Maps','');
+  if(/\b(open word|microsoft word)\b/.test(cmd)) return doCmd('open_word',{},'Opening Microsoft Word.','📘','Word','');
+  if(/\b(open excel|microsoft excel)\b/.test(cmd)) return doCmd('open_excel',{},'Opening Microsoft Excel.','📗','Excel','');
+  if(/\b(open powerpoint|microsoft powerpoint)\b/.test(cmd)) return doCmd('open_powerpoint',{},'Opening PowerPoint.','📙','PowerPoint','');
+  if(/\b(open teams|microsoft teams)\b/.test(cmd)) return doCmd('open_teams',{},'Opening Microsoft Teams.','💬','Teams','');
+  if(/\b(open vscode|open vs code|open visual studio code)\b/.test(cmd)) return doCmd('open_vscode',{},'Opening VS Code.','🎮','VS Code','');
+  if(/\b(open spotify app|open spotify)\b/.test(cmd)&&!/play/.test(cmd)) return doCmd('open_spotify_app',{},'Opening Spotify app.','🎵','Spotify','');
+  if(/\b(open whatsapp)\b/.test(cmd)) return doCmd('open_whatsapp',{},'Opening WhatsApp.','💬','WhatsApp','');
+  if(/\b(open zoom)\b/.test(cmd)) return doCmd('open_zoom',{},'Opening Zoom.','📹','Zoom','');
+  if(/\b(open discord)\b/.test(cmd)) return doCmd('open_discord',{},'Opening Discord.','🎮','Discord','');
+  if(/\b(open telegram)\b/.test(cmd)) return doCmd('open_telegram',{},'Opening Telegram.','✈️','Telegram','');
+  if(/\b(open vlc)\b/.test(cmd)) return doCmd('open_vlc',{},'Opening VLC.','🎬','VLC','');
+  if(/\b(open terminal|open command prompt|open cmd)\b/.test(cmd)) return doCmd('open_cmd',{},'Opening Command Prompt.','💻','Command Prompt','');
+  if(/\b(open powershell)\b/.test(cmd)) return doCmd('open_powershell',{},'Opening PowerShell.','🔲','PowerShell','');
+
+  if(/\b(take screenshot|screenshot|screen capture|screen shot)\b/.test(cmd)) return doCmd('screenshot',{},'Opening screenshot tool.','📸','Screenshot','');
+  if(/\b(snipping tool|snip area|snip screen)\b/.test(cmd)) return doCmd('snipping_tool',{},'Opening Snipping Tool.','✂️','Snipping Tool','');
+
+  if(/\bcopy\b/.test(cmd)&&!/command/.test(cmd)) return doCmd('shortcut_copy',{},'Copy executed.','📋','Copy','Ctrl+C sent');
+  if(/\bpaste\b/.test(cmd)) return doCmd('shortcut_paste',{},'Paste executed.','📋','Paste','Ctrl+V sent');
+  if(/\bcut\b/.test(cmd)&&!/calculate/.test(cmd)) return doCmd('shortcut_cut',{},'Cut executed.','✂️','Cut','Ctrl+X sent');
+  if(/\bundo\b/.test(cmd)) return doCmd('shortcut_undo',{},'Undo executed.','↩️','Undo','Ctrl+Z sent');
+  if(/\bredo\b/.test(cmd)) return doCmd('shortcut_redo',{},'Redo executed.','↪️','Redo','Ctrl+Y sent');
+  if(/\bsave file\b|save the file|save document/.test(cmd)) return doCmd('shortcut_save',{},'Save executed.','💾','Save','Ctrl+S sent');
+  if(/\bfind on page|find in page/.test(cmd)) return doCmd('shortcut_find',{},'Find opened.','🔍','Find','Ctrl+F sent');
+  if(/\bselect all\b/.test(cmd)) return doCmd('shortcut_selectall',{},'Select All executed.','☑️','Select All','Ctrl+A sent');
+  if(/\b(switch window|switch app|alt tab)\b/.test(cmd)) return doCmd('shortcut_switchtab',{},'Switching window.','🔄','Switch Window','Alt+Tab sent');
+  if(/\b(minimize window|minimise)\b/.test(cmd)) return doCmd('shortcut_minimize',{},'Window minimized.','⬇️','Minimize','');
+  if(/\b(maximize window|maximise)\b/.test(cmd)) return doCmd('shortcut_maximize',{},'Window maximized.','⬆️','Maximize','');
+  if(/\b(close window|close app)\b/.test(cmd)) return doCmd('shortcut_closewindow',{},'Window closed.','❌','Close Window','Alt+F4 sent');
+  if(/\bnew tab\b/.test(cmd)) return doCmd('shortcut_newtab',{},'New tab opened.','➕','New Tab','Ctrl+T sent');
+  if(/\bclose tab\b/.test(cmd)) return doCmd('shortcut_closetab',{},'Tab closed.','❌','Close Tab','Ctrl+W sent');
+  if(/\bprint\b/.test(cmd)&&!/screenshot/.test(cmd)) return doCmd('shortcut_print',{},'Print dialog opened.','🖨️','Print','Ctrl+P sent');
+
+  if(/\b(open|go to|navigate|visit|launch)\b/.test(cmd)&&!/settings|wifi|bluetooth|display|sound|task manager|control panel|file explorer|recycle|drive|calculator|notepad|terminal|powershell|cmd|word|excel|powerpoint|teams|vscode|vs code|spotify|whatsapp|zoom|discord|telegram|vlc|mail|maps|camera|photos|calendar|paint|screenshot|browser/i.test(cmd)){
+    const sites={google:'https://google.com',youtube:'https://youtube.com',github:'https://github.com',twitter:'https://twitter.com',reddit:'https://reddit.com',facebook:'https://facebook.com',gmail:'https://mail.google.com',maps:'https://maps.google.com',wikipedia:'https://wikipedia.org',netflix:'https://netflix.com',amazon:'https://amazon.com',linkedin:'https://linkedin.com',instagram:'https://instagram.com',chatgpt:'https://chat.openai.com',whatsapp:'https://web.whatsapp.com',notion:'https://notion.so',figma:'https://figma.com',canva:'https://canva.com',claude:'https://claude.ai'};
+    const found=Object.keys(sites).find(k=>cmd.includes(k));
+    if(found){respondCard(`Opening ${found}.`,'🌐',found.charAt(0).toUpperCase()+found.slice(1),sites[found],'success');setTimeout(()=>window.open(sites[found],'_blank'),1200);return;}
+    const stripped=cmd.replace(/open|go to|navigate to|visit|launch/gi,'').trim().split(' ')[0];
+    if(stripped&&stripped.length>2){respondCard(`Opening ${stripped}.`,'🌐',stripped,'Opening website...','success');setTimeout(()=>window.open('https://'+stripped+'.com','_blank'),1200);return;}
+  }
+
+  if(/\b(search for|search|look up|google)\b/.test(cmd)){
+    const q=cmd.replace(/search for|search|look up|google/gi,'').trim();
+    if(q){respondCard(`Searching for ${q}.`,'🔍','Google Search',q,'success');setTimeout(()=>{window.open('https://www.google.com/search?q='+encodeURIComponent(q),'_blank') || (window.location.href='https://www.google.com/search?q='+encodeURIComponent(q))},1200);return;}
+  }
+
+  if(/\b(weather|forecast)\b/.test(cmd)){respondCard('Opening weather.','🌤','Weather','Opening weather forecast','success');setTimeout(()=>window.open('https://wttr.in/','_blank'),1200);return;}
+
+  if(/\btime\b/.test(cmd)&&!/timer/.test(cmd)){
+    const t=new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    return respondCard(`The current time is ${t}.`,'🕐','Current Time',t);
+  }
+
+  if(/\b(date|day|today)\b/.test(cmd)&&!/update/.test(cmd)){
+    const d=new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+    return respondCard(`Today is ${d}.`,'📅','Today',d);
+  }
+
+  if(/\b(calculate|what is|compute|\bplus\b|\btimes\b|divided)\b/.test(cmd)){
+    let expr=cmd.replace(/\b(what is|calculate|compute)\b/gi,'').replace(/\bplus\b/gi,'+').replace(/\bminus\b/gi,'-').replace(/\btimes\b|\bmultiplied by\b/gi,'*').replace(/\bdivided by\b/gi,'/').replace(/[^0-9+\-*/(). ]/g,'').trim();
+    try{const r=Function('"use strict";return('+expr+')')();if(!isFinite(r))throw 0;
+      return respond(`The result is ${r}.`,`<div style="font-family:'Orbitron',monospace;font-size:1.7rem;color:var(--cyan);text-align:center;margin-top:10px">${expr} = ${r}</div>`);}
+    catch{return respond('Could not compute. Try: calculate 5 times 8.');}
+  }
+
+  if(/\btimer\b/.test(cmd)&&!/stop|cancel/.test(cmd)){
+    const hr=cmd.match(/(\d+)\s*(hour|hr)/i),mn=cmd.match(/(\d+)\s*(minute|min)/i),sc=cmd.match(/(\d+)\s*(second|sec)/i);
+    let total=0;
+    if(hr)total+=parseInt(hr[1])*3600;if(mn)total+=parseInt(mn[1])*60;if(sc)total+=parseInt(sc[1]);
+    if(total>0){const lbl=hr?`${hr[1]}hr`:mn?`${mn[1]}min`:`${sc[1]}sec`;respond(`Timer set for ${lbl}.`);runTimer(total);return;}
+    return respond('Say a duration like: set a timer for 5 minutes.');
+  }
+  if(/\b(stop timer|cancel timer)\b/.test(cmd)){if(timerI){clearInterval(timerI);timerI=null;outxEl.innerHTML='';}return respond('Timer stopped.');}
+
+  if(/\b(battery|battery status)\b/.test(cmd)){
+    if(serverOnline){
+      const res=await execCmd('get_battery');
+      if(res.ok!==false){
+        try{
+          const d=JSON.parse(res.message||res);
+          if(d.percent>0){
+            const pct=d.percent,color=pct>50?'var(--green)':pct>20?'var(--amber)':'var(--red)';
+            const bar=`<div style="margin-top:8px;background:var(--b);border-radius:4px;height:13px;overflow:hidden"><div style="height:100%;width:${pct}%;background:${color};border-radius:4px"></div></div><div style="font-size:.7rem;color:var(--muted);margin-top:4px;text-align:center">${pct}% ${d.charging?'⚡ Charging':'🔋'}</div>`;
+            return respond(`Battery is at ${pct} percent.`,bar);
+          }
+        }catch(e){}
+      }
+    }
+    if(navigator.getBattery){
+      navigator.getBattery().then(b=>{
+        const pct=Math.round(b.level*100),color=pct>50?'var(--green)':pct>20?'var(--amber)':'var(--red)';
+        const bar=`<div style="margin-top:8px;background:var(--b);border-radius:4px;height:13px;overflow:hidden"><div style="height:100%;width:${pct}%;background:${color};border-radius:4px"></div></div><div style="font-size:.7rem;color:var(--muted);margin-top:4px;text-align:center">${pct}% ${b.charging?'⚡ Charging':'🔋'}</div>`;
+        respond(`Battery is at ${pct} percent.`,bar);
+      });
+    }else{respond('Battery information unavailable.');}return;
+  }
+
+  if(/\b(write a note|take note|save note|remember)\b/.test(cmd)){
+    const c=cmd.replace(/write a note|take note|save note|remember that/gi,'').replace(/:/g,'').trim();
+    if(c){const notes=JSON.parse(localStorage.getItem('nx-notes')||'[]');notes.push({text:c,time:new Date().toLocaleString()});localStorage.setItem('nx-notes',JSON.stringify(notes));return respondCard(`Note saved: ${c}`,'📝','Note Saved',c,'success');}
+    return respond('What would you like to note?');
+  }
+  if(/\b(show notes|read notes|my notes)\b/.test(cmd)){
+    const notes=JSON.parse(localStorage.getItem('nx-notes')||'[]');
+    if(!notes.length)return respond('No saved notes.');
+    const html=`<div style="margin-top:8px">${notes.slice(-5).reverse().map(n=>`<div style="padding:5px 0;border-bottom:1px solid var(--b);font-size:.68rem"><span style="color:var(--cyan)">▸</span> ${n.text}<span style="color:var(--muted);float:right;font-size:.58rem">${n.time}</span></div>`).join('')}</div>`;
+    return respond(`You have ${notes.length} note${notes.length>1?'s':''}.`,html);
+  }
+
+  if(/\b(pause nexus|stop listening|nexus sleep|be quiet)\b/.test(cmd)){
+    manPause=true;stopRec();stopWave();setState('idle');olEl.textContent='SLEEPING';oiEl.textContent='😴';
+    return respond('Going to sleep. Say Hey Nexus or tap the orb to wake me.');
+  }
+
+  if(/\b(help|what can you do|commands)\b/.test(cmd)){
+    return respond('I can open any app, file, folder, system settings, take screenshots, control volume and brightness, run keyboard shortcuts, play music on YouTube or Spotify, search the web, set timers, check battery, and much more! Browse the command list on the right.');
+  }
+
+  if(/\b(clear|reset)\b/.test(cmd)){outxEl.innerHTML='';return respond('Cleared. Ready for next command.');}
+
+  // ── WHATSAPP CALLS ────────────────────────────────────────
+  // "call Rahul on whatsapp" / "whatsapp call Rahul"
+  // "video call Priya whatsapp"
+  if(/\b(whatsapp call|call .+ (on |via )?whatsapp|whatsapp video call|video call .+ whatsapp)\b/.test(cmd)){
+    const isVideo   = /video/.test(cmd);
+    const nameMatch = cmd.match(/\b(?:call|whatsapp call|whatsapp video call|video call)\s+([a-zA-Z]+)\b/i);
+    const callName  = nameMatch ? nameMatch[1] : '';
+    if(!callName){ respond('Kisko call karna hai? Bolo — "whatsapp call Rahul"'); return; }
+    const callType  = isVideo ? 'video' : 'voice';
+    const callLabel = isVideo ? 'Video' : 'Voice';
+    respond(`${callName} ko WhatsApp ${callLabel} Call laga raha hoon...`);
+    execCmd('whatsapp_call', {name: callName, call_type: callType}).then(res => {
+      let data; try{ data = JSON.parse(res.message); }catch(e){ data = res; }
+      respondCard(data.message||res.message, isVideo?'📹':'📞', `WhatsApp ${callLabel} Call`, callName, 'success');
+    });
+    return;
+  }
+
+  // ── WHATSAPP RECEIVE / END CALL ───────────────────────────
+  if(/\b(receive call|answer call|call aaya|call uthao|accept call)\b/.test(cmd)){
+    respond('Call receive kar raha hoon...');
+    execCmd('whatsapp_answer_call',{}).then(res=>{
+      let data; try{data=JSON.parse(res.message);}catch(e){data=res;}
+      respondCard(data.message||'Call receive!','📞','Call Received','','success');
+    });
+    return;
+  }
+
+  if(/\b(end call|call end|call band|call khatam|hang up|disconnect call)\b/.test(cmd)){
+    respond('Call band kar raha hoon...');
+    execCmd('whatsapp_end_call',{}).then(res=>{
+      let data; try{data=JSON.parse(res.message);}catch(e){data=res;}
+      respondCard(data.message||'Call band!','📵','Call Ended','','success');
+    });
+    return;
+  }
+
+  // ── WHATSAPP NOTIFICATIONS ────────────────────────────────
+  if(/\b(whatsapp notification|whatsapp message|kaun message|kiska message|new message|unread message|check whatsapp)\b/.test(cmd)){
+    respond('WhatsApp notifications check kar raha hoon...');
+    execCmd('whatsapp_notifications',{}).then(res=>{
+      let data; try{data=JSON.parse(res.message);}catch(e){data=res;}
+      const msg = data.message||res.message||'';
+      if(data.open_app){ execCmd('open_whatsapp',{}); }
+      respondCard(msg,'💬','WhatsApp Notifications',msg,'success');
+    });
+    return;
+  }
+
+  // ── WHATSAPP MESSAGE ───────────────────────────────────────
+  // Mode 1 — "whatsapp Gulshan kal 5 baje milte hain"  → jo bola wahi polish karke send
+  // Mode 2 — "whatsapp Gulshan about meeting"           → AI likhe topic se
+  if(/\b(whatsapp|send whatsapp|wa message|watsapp)\b/.test(cmd) && !/open whatsapp|whatsapp call|video call/.test(cmd)){
+
+    if(/compose|open composer/.test(cmd)){
+      showWAComposer('','','');
+      respEl.textContent = 'WhatsApp composer open!';
+      speak('WhatsApp composer open.');
+      return;
+    }
+
+    // Extract contact name — first word after "whatsapp"
+    const waNameMatch = cmd.match(/\b(?:send whatsapp to|whatsapp to|whatsapp)\s+([a-zA-Z]+)\b/i);
+    const waName = waNameMatch ? waNameMatch[1] : '';
+
+    if(!waName){
+      respond('Kisko message bhejnaa hai? Bolo — "whatsapp Rahul kal milte hain"');
+      return;
+    }
+
+    // Remove trigger words + name to get the raw message / topic
+    let remaining = cmd
+      .replace(/\b(send whatsapp to|whatsapp to|whatsapp)\s+/i, '')
+      .replace(new RegExp(waName, 'i'), '')
+      .trim();
+
+    // Detect mode:
+    // "about/regarding" → AI write mode
+    // anything else     → polish mode (user's own words)
+    const isAIMode = /^\s*(about|regarding|for|topic)\s+/i.test(remaining);
+    const waTopic  = remaining.replace(/^\s*(about|regarding|for|topic)\s+/i, '').trim();
+
+    if(!waTopic){
+      respond(`${waName} ko kya bolna hai? Seedha bolo — "whatsapp ${waName} kal 5 baje milte hain"`);
+      return;
+    }
+
+    const mode = isAIMode ? 'ai' : 'polish';
+    respond(`${waName} ko message bhej raha hoon...`);
+    waDirectSend(waName, waTopic, mode);
+    return;
+  }
+
+  // ── CONTACTS ──────────────────────────────────────────────
+  if(/\b(show contacts|my contacts|contact list|add contact|save contact)\b/.test(cmd)){
+    if(/add contact|save contact/.test(cmd)) { showContactManager(); respEl.textContent='Contact manager open! Name aur email add karo.'; speak('Contact manager open.'); return; }
+    showContactManager();
+    respEl.textContent='Yahan apne contacts dekho aur add karo!';
+    speak('Showing contacts.');
+    return;
+  }
+
+  // ── AI EMAIL ───────────────────────────────────────────────
+  // Voice patterns:
+  //   "send email to rahul@gmail.com about meeting tomorrow"
+  //   "send email to ravi about project update"
+  //   "email priya@gmail.com regarding interview"
+  //   "compose email"  /  "write email"
+  if(/\b(send email|send an email|email|compose email|write email|draft email)\b/.test(cmd)){
+
+    // Extract email address
+    const emailMatch = cmd.match(/\b([\w.\-+]+@[\w.\-]+\.[a-z]{2,})\b/i);
+    let toAddr    = emailMatch ? emailMatch[1] : '';
+    let recipName = emailMatch ? emailMatch[1].split('@')[0] : '';
+
+    // Extract name after "to"
+    if(!toAddr){
+      const toName = cmd.match(/\b(?:send email to|email to)\s+([a-zA-Z]+)\b/i);
+      if(toName) recipName = toName[1];
+    }
+
+    // ── Contact lookup by name ─────────────────────────────
+    if(!toAddr && recipName && recipName.length > 1){
+      const contacts = getContacts();
+      const found = contacts.find(c =>
+        c.name.toLowerCase() === recipName.toLowerCase() ||
+        c.name.toLowerCase().includes(recipName.toLowerCase())
+      );
+      if(found){ toAddr = found.email; recipName = found.name; }
+    }
+
+    // Extract topic
+    const topicMatch = cmd.match(/\b(?:about|regarding|for|re\b|subject)\s+(.+)$/i);
+    const topic      = topicMatch ? topicMatch[1].trim() : '';
+
+    // Open composer + trigger AI generation
+    if(cmd.match(/compose email|write email|draft email/i) && !toAddr && !topic){
+      showAIEmailComposer('', '', '');
+      respEl.textContent = 'Email composer open. Fill details aur AI Likhega dabao!';
+      speak('Email composer open. Fill in the details.');
+      return;
+    }
+
+    if(!toAddr){
+      // Check if name was said but not in contacts
+      if(recipName && recipName.length > 1){
+        showAIEmailComposer('', topic, recipName);
+        respEl.textContent = `"${recipName}" contacts mein nahi mila! Email address type karo ya pehle contact add karo.`;
+        speak(`${recipName} not found in contacts. Please enter email address.`);
+      } else {
+        showAIEmailComposer('', topic, '');
+        respEl.textContent = 'Email address type karo ya contacts mein naam add karo!';
+        speak('Please enter the recipient email address.');
+      }
+      return;
+    }
+
+    if(!topic){
+      showAIEmailComposer(toAddr, '', recipName);
+      respEl.textContent = `To: ${toAddr} — Topic type karo, fir AI Likhega dabao!`;
+      speak('What is the email about?');
+      return;
+    }
+
+    // Both available — show composer + auto-generate
+    showAIEmailComposer(toAddr, topic, recipName, '', '');
+    respEl.textContent = `AI email likh raha hai ${recipName||toAddr} ke liye...`;
+    speak(`Writing email to ${recipName||toAddr} about ${topic}.`);
+    return;
+  }
+
+  return aiAssistance(cmd);
+}
+
+// ═══ AI ASSISTANCE ═══════════════════════════════════════════
+function aiAssistance(input){
+  const q=input.toLowerCase().trim();
+  if(/\b(tip|suggest|recommendation|advice)\b/.test(q)){
+    const tips=['Try saying "help" to see all available commands.','Use "open [app name]" to quickly launch any application.','Say "search for [topic]" to search the web instantly.','You can control volume, brightness, and display settings with voice.','Use "set a timer" for reminders and time management.','Save notes by saying "write a note: [content]".','Open any website by saying "open [website name]".'];
+    return respondCard(tips[Math.floor(Math.random()*tips.length)],'💡','AI Tip','');
+  }
+  if(/\b(can i|can you|do you|are you)\b/.test(q)){
+    if(/\b(talk|speak|say|audio)\b/.test(q)) return respond('Yes, I can speak and understand voice commands using Web Speech API.');
+    if(/\b(remember|save|store|note)\b/.test(q)) return respond('Yes! I can save notes. Say "write a note: [what you want to remember]".');
+    if(/\b(open|app|program)\b/.test(q)) return respond('Yes, I can open any application, file, folder, or website on your laptop.');
+    return respond('I can do many things! Ask "help" or "what can you do" for a complete list.');
+  }
+  if(/\b(what can|what do|what will|features|capabilities)\b/.test(q)){
+    const f='<div style="margin-top:10px;font-size:.75rem"><div style="padding:4px 0"><span style="color:var(--cyan)">▸</span> Open apps, files & folders</div><div style="padding:4px 0"><span style="color:var(--green)">▸</span> Control volume & brightness</div><div style="padding:4px 0"><span style="color:var(--amber)">▸</span> Search web & open websites</div><div style="padding:4px 0"><span style="color:var(--purple)">▸</span> Set timers & check battery</div><div style="padding:4px 0"><span style="color:var(--cyan)">▸</span> Keyboard shortcuts (copy, paste, save)</div><div style="padding:4px 0"><span style="color:var(--green)">▸</span> Play music on YouTube instantly</div><div style="padding:4px 0"><span style="color:var(--amber)">▸</span> Save & read notes</div></div>';
+    return respond('Here are my main capabilities:',f);
+  }
+  respond(`I heard: "${input}". Not recognized. Try "help" or "what can you do" to see all commands.`,
+    '<div style="padding:8px;margin-top:8px;background:var(--panel2);border-radius:4px;font-size:.72rem;color:var(--muted)">💬 Browse the command list in the sidebar or ask "help".</div>');
+}
+
+// ═══ CONTACT MANAGER ════════════════════════════════════════
+
+function getContacts(){
+  try{ return JSON.parse(localStorage.getItem('nx-contacts')||'[]'); }catch(e){ return []; }
+}
+function saveContacts(list){
+  localStorage.setItem('nx-contacts', JSON.stringify(list));
+}
+
+function showContactManager(){
+  const contacts = getContacts();
+  const listHtml = contacts.length === 0
+    ? `<div class="no-contacts">📭 Koi contact nahi — neeche add karo!</div>`
+    : contacts.map((c,i) => `
+        <div class="contact-item">
+          <div>
+            <div class="contact-name">👤 ${c.name}</div>
+            <div class="contact-email">📧 ${c.email||'—'} &nbsp;|&nbsp; 📱 ${c.phone||'—'}</div>
+          </div>
+          <button class="contact-del" onclick="deleteContact(${i})">✕</button>
+        </div>`).join('');
+
+  outxEl.innerHTML = `
+    <div class="contacts-card">
+      <div class="contacts-hdr">
+        <span style="font-size:1rem">👥</span>
+        <div>
+          <div style="font-size:0.65rem;color:var(--green);letter-spacing:0.1em;text-transform:uppercase">Contact List</div>
+          <div style="font-size:0.55rem;color:var(--muted)">Email + WhatsApp dono ke liye!</div>
+        </div>
+      </div>
+      <div class="contacts-body">
+        ${listHtml}
+        <div style="font-size:0.6rem;color:var(--muted);margin-top:4px;letter-spacing:0.1em">── NAYA CONTACT ADD KARO ──</div>
+        <div class="contact-add-row">
+          <input id="ct-name"  class="contact-input" placeholder="Naam (jaise: Rahul)" />
+          <input id="ct-email" class="contact-input" placeholder="Email (optional)" type="email"/>
+        </div>
+        <div class="contact-add-row">
+          <input id="ct-phone" class="contact-input" placeholder="📱 Phone: 9876543210 (WhatsApp ke liye)" type="tel"/>
+        </div>
+        <div class="contact-add-row">
+          <button class="contact-save-btn" onclick="addContact()">➕ Add Contact</button>
+          <button class="contact-save-btn" style="border-color:rgba(0,229,255,0.3);color:var(--cyan)" onclick="outxEl.innerHTML=''">✕ Band Karo</button>
+        </div>
+        <div id="ct-status" style="font-size:0.62rem;min-height:16px;color:var(--green)"></div>
+      </div>
+    </div>`;
+  setTimeout(()=>outxEl.scrollIntoView({behavior:'smooth',block:'start'}),100);
+}
+
+function addContact(){
+  const name  = document.getElementById('ct-name')?.value.trim();
+  const email = document.getElementById('ct-email')?.value.trim();
+  const phone = document.getElementById('ct-phone')?.value.trim().replace(/\D/g,'');
+  const status= document.getElementById('ct-status');
+  if(!name){ if(status){status.textContent='⚠️ Naam likho!';} return; }
+  if(!email && !phone){ if(status){status.textContent='⚠️ Email ya Phone mein se koi ek zaroori hai!';} return; }
+  const contacts = getContacts();
+  if(contacts.find(c=>c.name.toLowerCase()===name.toLowerCase())){
+    if(status){status.textContent=`⚠️ "${name}" already saved hai!`;} return;
+  }
+  contacts.push({name, email: email||'', phone: phone||''});
+  saveContacts(contacts);
+  if(status){status.textContent=`✅ ${name} add ho gaya!`;}
+  setTimeout(()=>showContactManager(), 800);
+}
+
+function deleteContact(index){
+  const contacts = getContacts();
+  const name = contacts[index]?.name || '';
+  contacts.splice(index,1);
+  saveContacts(contacts);
+  showContactManager();
+  respEl.textContent = `${name} delete ho gaya!`;
+}
+
+// ═══ WHATSAPP FUNCTIONS ══════════════════════════════════════
+
+function showWAComposer(name='', topic='', message=''){
+  const isGenerating = topic && !message;
+
+  outxEl.innerHTML = `
+    <div class="wa-card">
+      <div class="wa-hdr">
+        <span style="font-size:1.2rem">💬</span>
+        <div>
+          <div class="wa-title">WhatsApp Composer</div>
+          <div class="wa-sub">AI message likhega — WhatsApp Desktop mein seedha bhejega!</div>
+        </div>
+      </div>
+      <div class="wa-body">
+
+        <div>
+          <span class="wa-label">👤 Contact Ka Naam (WhatsApp mein jo save hai)</span>
+          <input id="wa-name" class="wa-input" type="text"
+            placeholder="jaise: Rahul, Priya, Mom..." value="${name}"
+            oninput="document.getElementById('wa-status').textContent=''">
+        </div>
+
+        <div>
+          <span class="wa-label">💬 Topic / Kya Bolna Hai?</span>
+          <input id="wa-topic" class="wa-input" type="text"
+            placeholder="jaise: meeting kal, birthday wish, thanks..."
+            value="${topic}">
+        </div>
+
+        <div>
+          <span class="wa-label">✍️ Message <span class="wa-badge">✨ AI</span></span>
+          ${isGenerating
+            ? `<div class="wa-generating"><div class="wa-dot"></div><div class="wa-dot"></div><div class="wa-dot"></div><span>AI message likh raha hai...</span></div>
+               <textarea id="wa-msg" class="wa-input" placeholder="Generating...">${message}</textarea>`
+            : `<textarea id="wa-msg" class="wa-input"
+                placeholder="AI likh dega ya khud type karo...">${message}</textarea>`
+          }
+        </div>
+
+        <div class="wa-actions">
+          <button class="wa-btn ai" onclick="waAIGenerate()">✨ AI Likhega</button>
+          <button class="wa-btn send" onclick="waSend()">📤 WhatsApp Bhejo</button>
+          <button class="wa-btn cancel" onclick="outxEl.innerHTML='';respond('WhatsApp cancelled.')">✕</button>
+        </div>
+        <div id="wa-status" class="wa-status"></div>
+        <div style="font-size:0.58rem;color:var(--muted);margin-top:6px;line-height:1.6;">
+          ℹ️ WhatsApp Desktop mein "<b style="color:var(--cyan)">${name||'contact'}</b>" dhundh ke message bhejega.<br>
+          ⚡ Full auto ke liye CMD mein: <span style="color:var(--amber)">pip install pyautogui</span>
+        </div>
+      </div>
+    </div>`;
+
+  if(isGenerating) setTimeout(()=>waAIGenerate(), 300);
+  setTimeout(()=>outxEl.scrollIntoView({behavior:'smooth',block:'start'}),100);
+}
+
+async function waAIGenerate(){
+  const topic  = document.getElementById('wa-topic')?.value.trim();
+  const msgEl  = document.getElementById('wa-msg');
+  const status = document.getElementById('wa-status');
+  if(!topic){ if(status){status.textContent='⚠️ Topic likho pehle!';status.className='wa-status err';} return; }
+  if(status){status.textContent='✨ AI message likh raha hai...';status.className='wa-status info';}
+  if(msgEl) msgEl.value='Generating...';
+
+  if(!serverOnline){
+    if(msgEl) msgEl.value = waSmartTemplate(topic,'');
+    if(status){status.textContent='✅ Message ready!';status.className='wa-status ok';} return;
+  }
+  try{
+    const res = await execCmd('whatsapp_ai_message',{topic, name:''});
+    let data;
+    try{data=typeof res.message==='string'?JSON.parse(res.message):res;}catch(e){data=res;}
+    const msg = data.message||data.msg||'';
+    if(msg && msg.length > 5){
+      if(msgEl) msgEl.value = msg;
+      if(status){status.textContent='✅ AI ne message likh diya! Review karo aur bhejo.';status.className='wa-status ok';}
+    } else {
+      if(msgEl) msgEl.value = waSmartTemplate(topic,'');
+      if(status){status.textContent='✅ Message ready!';status.className='wa-status ok';}
+    }
+  }catch(e){
+    if(msgEl) msgEl.value = waSmartTemplate(topic,'');
+    if(status){status.textContent='✅ Message ready!';status.className='wa-status ok';}
+  }
+}
+
+function waSmartTemplate(topic, name){
+  const t = topic.toLowerCase();
+  const n = name||'';
+  const hi = n ? `Hey ${n}! ` : 'Hey! ';
+  if(/meeting|call|milte/.test(t)) return `${hi}${topic} ke baare mein baat karni thi. Kab free ho? 😊`;
+  if(/thank|shukriya/.test(t))     return `${hi}${topic} ke liye bahut shukriya! 🙏`;
+  if(/birthday|janamdin/.test(t))  return `${hi}Happy Birthday! 🎉🎂 Bahut bahut badhaai ho! Khush raho hamesha! 😊`;
+  if(/sorry|maafi/.test(t))        return `${hi}${topic} ke liye dil se maafi chahta hoon. 🙏`;
+  if(/help|madad/.test(t))         return `${hi}${topic} mein thodi help chahiye thi. Available ho kya? 😊`;
+  return `${hi}${topic} ke baare mein baat karni thi. Kab baat kar sakte hain? 😊`;
+}
+
+async function waSend(){
+  const name   = document.getElementById('wa-name')?.value.trim();
+  const msg    = document.getElementById('wa-msg')?.value.trim();
+  const status = document.getElementById('wa-status');
+
+  if(!name){ if(status){status.textContent='⚠️ Contact ka naam daalo!';status.className='wa-status err';} return; }
+  if(!msg||msg==='Generating...'){if(status){status.textContent='⚠️ Message likho ya AI Likhega dabao!';status.className='wa-status err';} return;}
+  if(status){status.textContent='📤 WhatsApp khul raha hai...';status.className='wa-status info';}
+
+  if(!serverOnline){
+    if(status){status.textContent='⚠️ Server offline! python nexus_server.py chalao.';status.className='wa-status err';} return;
+  }
+  const res = await execCmd('whatsapp_send',{name, message:msg});
+  let data;
+  try{data=typeof res.message==='string'?JSON.parse(res.message):res;}catch(e){data=res;}
+  const ok  = data.ok!==undefined?data.ok:res.ok;
+  const txt = data.message||res.message||'';
+
+  if(ok){
+    // Check if pyautogui not installed
+    if(data.needs_pyautogui){
+      if(status){status.textContent='⚠️ pyautogui nahi hai — manual dhundho!';status.className='wa-status err';}
+      respondCard(txt,'💬','WhatsApp Khul Gaya',`"${name}" ko manually dhundho aur message bhejo`,'success');
+    } else {
+      respondCard(txt,'✅','WhatsApp Sent!',`To: ${name}`,'success');
+    }
+  } else {
+    if(status){status.textContent=`❌ ${txt}`;status.className='wa-status err';}
+  }
+}
+
+async function waDirectSend(name, topic, mode='polish'){
+  // Step 1: AI se message likwao / polish karwao
+  let message = '';
+  try{
+    if(serverOnline){
+      const res = await execCmd('whatsapp_ai_message', {topic, name, mode});
+      let data;
+      try{ data = typeof res.message==='string' ? JSON.parse(res.message) : res; }catch(e){ data=res; }
+      message = data.message || data.msg || '';
+    }
+  }catch(e){}
+
+  // Client-side fallback
+  if(!message || message.length < 3){
+    if(mode === 'polish'){
+      message = topic.toLowerCase().startsWith('hey') ? `${topic} 😊` : `Hey ${name}! ${topic} 😊`;
+    } else {
+      message = waSmartTemplate(topic, name);
+    }
+  }
+
+  // Step 2: Seedha WhatsApp mein bhejo
+  respEl.textContent = `"${name}" ko message bhej raha hoon... 📤`;
+  outxEl.innerHTML = `
+    <div class="wa-card" style="padding:12px 14px;">
+      <div style="font-size:0.65rem;color:#25d366;margin-bottom:6px;">💬 Sending to: <b>${name}</b></div>
+      <div style="font-size:0.72rem;color:var(--text);line-height:1.6;background:var(--panel2);padding:8px 10px;border-radius:6px;border:1px solid var(--b);">${message}</div>
+      <div id="wa-send-status" style="font-size:0.62rem;color:var(--cyan);margin-top:8px;">📤 WhatsApp khul raha hai...</div>
+    </div>`;
+  setTimeout(()=>outxEl.scrollIntoView({behavior:'smooth',block:'start'}),100);
+
+  if(!serverOnline){
+    document.getElementById('wa-send-status').textContent = '⚠️ Server offline! python nexus_server.py chalao.';
+    document.getElementById('wa-send-status').style.color = 'var(--red)';
+    return;
+  }
+
+  try{
+    const res = await execCmd('whatsapp_send', {name, message});
+    let data;
+    try{ data = typeof res.message==='string' ? JSON.parse(res.message) : res; }catch(e){ data=res; }
+    const ok  = data.ok !== undefined ? data.ok : res.ok;
+    const txt = data.message || res.message || '';
+
+    const statusEl = document.getElementById('wa-send-status');
+    if(ok && !data.needs_pyautogui){
+      if(statusEl){ statusEl.textContent = '✅ Message send ho gaya!'; statusEl.style.color='#25d366'; }
+      speak(`${name} ko message bhej diya!`);
+    } else if(data.needs_pyautogui){
+      if(statusEl){ statusEl.innerHTML = '⚠️ pyautogui nahi hai!<br><span style="color:var(--amber)">CMD mein chalao: pip install pyautogui</span>'; statusEl.style.color='var(--amber)'; }
+      speak('pyautogui install karo automation ke liye.');
+    } else {
+      if(statusEl){ statusEl.textContent = `❌ ${txt}`; statusEl.style.color='var(--red)'; }
+      speak('WhatsApp message send nahi hua.');
+    }
+  }catch(e){
+    const statusEl = document.getElementById('wa-send-status');
+    if(statusEl){ statusEl.textContent = `❌ Error: ${e.message}`; statusEl.style.color='var(--red)'; }
+  }
+}
+
+async function aiWriteAndShowWA(name, topic){
+  showWAComposer(name, topic, '');
+}
+
+// ═══ AI EMAIL FUNCTIONS ═════════════════════════════════════
+
+function showAIEmailComposer(to='', topic='', recipName='', subject='', body=''){
+  const isGenerating = topic && !body;
+  outxEl.innerHTML = `
+    <div class="email-card">
+      <div class="email-hdr">
+        <span class="email-hdr-ico">🤖</span>
+        <div>
+          <div class="email-hdr-title">AI Email Composer</div>
+          <div class="email-hdr-sub">AI automatically writes the email for you</div>
+        </div>
+      </div>
+      <div class="email-body">
+        <div class="email-field">
+          <span class="email-label">📬 To (Recipient Email)</span>
+          <input id="em-to" class="email-input" type="email" placeholder="example@gmail.com" value="${to}">
+        </div>
+        <div class="email-field">
+          <span class="email-label">💬 Topic — What should the email be about?</span>
+          <input id="em-topic" class="email-input" type="text"
+            placeholder="e.g. meeting tomorrow, project update, thank you..."
+            value="${topic}">
+        </div>
+        <div class="email-field">
+          <span class="email-label">📌 Subject <span class="email-ai-badge">✨ AI</span></span>
+          <input id="em-sub" class="email-input" type="text" placeholder="AI will fill this..." value="${subject}">
+        </div>
+        <div class="email-field">
+          <span class="email-label">📝 Message Body <span class="email-ai-badge">✨ AI</span></span>
+          ${isGenerating
+            ? `<div class="email-ai-generating"><div class="email-ai-dot"></div><div class="email-ai-dot"></div><div class="email-ai-dot"></div><span>AI is writing your email...</span></div>
+               <textarea id="em-body" class="email-input" placeholder="Generating...">${body}</textarea>`
+            : `<textarea id="em-body" class="email-input" placeholder="AI will write this, or type manually...">${body}</textarea>`
+          }
+        </div>
+        <div class="email-actions">
+          <button class="email-btn ai-btn" onclick="aiGenerateInComposer()">✨ AI Likhega</button>
+          <button class="email-btn send" onclick="sendEmailFromComposer()">📤 Send Email</button>
+          <button class="email-btn" onclick="outxEl.innerHTML='';respond('Email cancelled.')">✕ Cancel</button>
+        </div>
+        <div id="em-status" class="email-status"></div>
+      </div>
+    </div>`;
+  if(isGenerating) setTimeout(()=>aiGenerateInComposer(), 300);
+  // Auto scroll to composer
+  setTimeout(()=>{ outxEl.scrollIntoView({behavior:'smooth', block:'start'}); }, 100);
+}
+
+// Client-side smart templates (works without API key)
+function clientSideEmailDraft(topic){
+  const t = topic.toLowerCase();
+  let subject, body;
+  if(/meeting|call|schedule|appointment/.test(t)){
+    subject = `Meeting Request – ${topic}`;
+    body    = `Hi,\n\nI hope you're doing well. I wanted to reach out regarding ${topic}.\nCould we please schedule a time that works for you? I'm flexible and happy to adjust to your availability.\n\nPlease let me know your preferred date and time.\n\nBest regards,\n[Your Name]`;
+  } else if(/follow.?up|update|status|progress/.test(t)){
+    subject = `Follow-Up: ${topic}`;
+    body    = `Hi,\n\nI wanted to follow up regarding ${topic}.\nCould you please share the latest update when you get a chance?\n\nLooking forward to hearing from you.\n\nBest regards,\n[Your Name]`;
+  } else if(/thank|thanks|grateful|appreciate/.test(t)){
+    subject = `Thank You – ${topic}`;
+    body    = `Hi,\n\nI just wanted to sincerely thank you regarding ${topic}.\nYour support and effort truly made a difference.\n\nWarm regards,\n[Your Name]`;
+  } else if(/sorry|apolog|mistake|error/.test(t)){
+    subject = `Apology – ${topic}`;
+    body    = `Hi,\n\nI sincerely apologize regarding ${topic}.\nThis was unintentional and I take full responsibility. Please let me know how I can make this right.\n\nBest regards,\n[Your Name]`;
+  } else if(/invite|invitation|join|event|party/.test(t)){
+    subject = `Invitation – ${topic}`;
+    body    = `Hi,\n\nI would love to invite you to ${topic}.\nIt would be wonderful to have you join us. Please let me know if you can make it!\n\nLooking forward to seeing you!\n\nBest regards,\n[Your Name]`;
+  } else if(/project|work|task|deadline/.test(t)){
+    subject = `Project Update: ${topic}`;
+    body    = `Hi,\n\nI'm writing regarding ${topic}.\nI wanted to ensure we're aligned on priorities and timelines. Please feel free to share any feedback.\n\nBest regards,\n[Your Name]`;
+  } else {
+    subject = topic.trim().charAt(0).toUpperCase() + topic.trim().slice(1);
+    body    = `Hi,\n\nI hope this message finds you well.\nI wanted to reach out regarding ${topic}. Please let me know if you have any questions or need additional information.\n\nBest regards,\n[Your Name]`;
+  }
+  return {subject, body};
+}
+
+async function aiGenerateInComposer(){
+  const topic  = document.getElementById('em-topic')?.value.trim();
+  const status = document.getElementById('em-status');
+  const subEl  = document.getElementById('em-sub');
+  const bodyEl = document.getElementById('em-body');
+  if(!topic){ if(status){status.textContent='⚠️ Please enter a topic first.';status.className='email-status err';} return; }
+  if(status){status.textContent='✨ AI is writing your email...';status.className='email-status info';}
+  if(subEl)  subEl.value  = 'Generating...';
+  if(bodyEl) bodyEl.value = 'Generating...';
+  if(!serverOnline){
+    const {subject,body}=clientSideEmailDraft(topic);
+    if(subEl) subEl.value=subject; if(bodyEl) bodyEl.value=body;
+    if(status){status.textContent='✅ Email drafted (template).';status.className='email-status ok';} return;
+  }
+  try{
+    const res = await execCmd('ai_compose_email',{topic,recipient_name:''});
+    let data;
+    try{data=typeof res.message==='string'?JSON.parse(res.message):res;}catch(e){data=res;}
+    if(data.ok!==false&&(data.subject||data.body)){
+      if(subEl)  subEl.value  = data.subject||'';
+      if(bodyEl) bodyEl.value = data.body||'';
+      if(status){status.textContent='✅ AI ne email likh diya! Review karein aur Send dabayein.';status.className='email-status ok';}
+    } else {
+      const {subject,body}=clientSideEmailDraft(topic);
+      if(subEl) subEl.value=subject; if(bodyEl) bodyEl.value=body;
+      if(status){status.textContent='✅ Email drafted.';status.className='email-status ok';}
+    }
+  }catch(e){
+    const {subject,body}=clientSideEmailDraft(topic);
+    if(subEl) subEl.value=subject; if(bodyEl) bodyEl.value=body;
+    if(status){status.textContent='✅ Email drafted (template used).';status.className='email-status ok';}
+  }
+}
+
+async function sendEmailFromComposer(){
+  const to      = document.getElementById('em-to')?.value.trim();
+  const subject = document.getElementById('em-sub')?.value.trim();
+  const body    = document.getElementById('em-body')?.value.trim();
+  const status  = document.getElementById('em-status');
+  if(!to){if(status){status.textContent='⚠️ Recipient email required.';status.className='email-status err';}return;}
+  if(!body||body==='Generating...'){if(status){status.textContent='⚠️ Please wait for AI or type a message.';status.className='email-status err';}return;}
+  if(status){status.textContent='📤 Sending...';status.className='email-status info';}
+  await sendEmailNow(to, subject||'Message from NEXUS', body);
+}
+
+async function aiComposeAndShow(toAddr, topic, recipName){
+  showAIEmailComposer(toAddr, topic, recipName, '', '');
+}
+
+async function sendEmailNow(to, subject, body){
+  if(!serverOnline){respondCard('Server offline. Start nexus_server.py first.','⚠️','Server Offline','Run: python nexus_server.py','error');return;}
+  try{
+    const res = await execCmd('send_email',{to,subject,body});
+    let parsed;
+    try{parsed=typeof res.message==='string'?JSON.parse(res.message):res;}catch(e){parsed=res;}
+    const ok=parsed.ok!==undefined?parsed.ok:res.ok;
+    const msg=parsed.message||res.message||'';
+    if(ok){respondCard(msg||`Email sent to ${to}!`,'✅','Email Sent!',`To: ${to}`,'success');}
+    else{respondCard(msg||'Email failed.','❌','Email Failed',msg,'error');}
+  }catch(e){respondCard('Could not reach server.','❌','Error',e.message,'error');}
+}
+
+
+// ═══ MANUAL TOGGLE ═══════════════════════════════════════════
+function manualToggle(){
+  if(!started){
+    started=true;unlockSpeech();manPause=false;
+    rec=buildRec();
+    if(!rec){respEl.textContent='⚠ Speech API not supported. Use Google Chrome or Microsoft Edge.';setState('error');return;}
+    setTimeout(()=>{setState('listening');startRec();setTimeout(()=>respond('Nexus online. Full laptop voice control is active. What would you like me to open or play?'),600);},300);
+  } else {
+    if(manPause){manPause=false;stopRec();setTimeout(()=>{setState('listening');startRec();},300);respond('Resumed.');}
+    else{manPause=true;stopRec();stopWave();setState('idle');olEl.textContent='PAUSED';oiEl.textContent='⏸️';respEl.textContent='Paused. Tap orb or say "Hey Nexus" to resume.';}
+  }
+}
+
+if(window.speechSynthesis){speechSynthesis.onvoiceschanged=()=>speechSynthesis.getVoices();speechSynthesis.getVoices();}
+setState('idle');stxtEl.textContent='Tap the orb to start';
+</script>
+</body>
+</html>
