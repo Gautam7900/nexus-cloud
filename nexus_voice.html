@@ -715,6 +715,11 @@ async function processCommand(cmd){
       .replace(/\b(play|listen to|on youtube|on spotify|on soundcloud|on apple music|youtube|spotify|soundcloud)\b/gi,'')
       .trim();
 
+    // If no song name but youtube keyword present — ask what to play
+    if(!song && /youtube/.test(cmd)){
+      return respond('Kaunsa gaana bajana hai? Bolo — "play Believer on YouTube"');
+    }
+
     // Detect platform
     if(/spotify/.test(cmd)){
       if(song){
@@ -742,7 +747,7 @@ async function processCommand(cmd){
       return;
     }
 
-    return respond('What song would you like me to play?');
+    return respond('Kaunsa gaana bajana hai? Bolo — "play Believer on YouTube"');
   }
 
   // ── VOLUME ─────────────────────────────────────────────────
