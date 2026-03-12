@@ -651,15 +651,8 @@ function playOnYouTube(songName) {
   outxEl.innerHTML = cardHtml;
   speak(`Playing ${songName} on YouTube.`);
 
-  // Auto-open YouTube and click first video after 1.5 seconds
-  setTimeout(() => {
-    window.open(autoplayURL, '_blank') || (window.location.href = autoplayURL);
-  }, 1500);
-
-  // After YouTube opens, click first video via server
-  setTimeout(async () => {
-    await execCmd('youtube_click_first', {});
-  }, 4000);
+  // Send command to laptop to open YouTube and click first video
+  execCmd('play_youtube', {query: songName});
 }
 
 // ═══ MAIN COMMAND PROCESSOR ══════════════════════════════════
