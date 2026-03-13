@@ -651,8 +651,13 @@ function playOnYouTube(songName) {
   outxEl.innerHTML = cardHtml;
   speak(`Playing ${songName} on YouTube.`);
 
-  // Send command to laptop to open YouTube and click first video
-  execCmd('play_youtube', {query: songName});
+  // Send command to laptop to open YouTube + auto click first video
+  execCmd('play_youtube', {query: songName}).then(() => {
+    // 3 second baad first video click karo
+    setTimeout(() => {
+      execCmd('youtube_click_first', {});
+    }, 3000);
+  });
 }
 
 // ═══ MAIN COMMAND PROCESSOR ══════════════════════════════════
