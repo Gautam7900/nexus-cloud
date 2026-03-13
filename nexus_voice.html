@@ -957,11 +957,20 @@ async function processCommand(cmd){
   // ── WHATSAPP NOTIFICATIONS ────────────────────────────────
   if(/\b(whatsapp notification|whatsapp message|kaun message|kiska message|new message|unread message|check whatsapp)\b/.test(cmd)){
     respond('WhatsApp notifications check kar raha hoon...');
-    execCmd('whatsapp_notifications',{}).then(res=>{
+    // Pehle queue se check karo (real-time monitor se aaya message)
+    execCmd('wa_poll_notif',{}).then(res=>{
       let data; try{data=JSON.parse(res.message);}catch(e){data=res;}
-      const msg = data.message||res.message||'';
-      if(data.open_app){ execCmd('open_whatsapp',{}); }
-      respondCard(msg,'💬','WhatsApp Notifications',msg,'success');
+      if(data.has_notif && data.message){
+        respondCard(data.message,'💬','WhatsApp Notifications',data.message,'success');
+      } else {
+        // Queue empty hai — DB se latest padhho
+        execCmd('whatsapp_notifications',{}).then(res2=>{
+          let data2; try{data2=JSON.parse(res2.message);}catch(e){data2=res2;}
+          const msg = data2.message||res2.message||'Koi naya WhatsApp message nahi mila.';
+          if(data2.open_app){ execCmd('open_whatsapp',{}); }
+          respondCard(msg,'💬','WhatsApp Notifications',msg,'success');
+        });
+      }
     });
     return;
   }
