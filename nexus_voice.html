@@ -621,8 +621,8 @@ function runTimer(total){
 // Shows a mini player card with direct play button + auto-opens
 function playOnYouTube(songName) {
   const searchQuery = encodeURIComponent(songName);
-  // This URL directly plays first search result on YouTube
   const autoplayURL = `https://www.youtube.com/results?search_query=${searchQuery}`;
+  const ytMusicURL = `https://music.youtube.com/search?q=${searchQuery}`;
 
   const cardHtml = `
     <div class="yt-card">
@@ -634,7 +634,7 @@ function playOnYouTube(songName) {
         </div>
       </div>
       <div class="yt-btns">
-        <button class="yt-btn primary" onclick="window.open('${autoplayURL}','_blank')">
+        <button class="yt-btn primary" onclick="ytAutoPlay('${songName}', '${autoplayURL}', this)">
           ▶ Play on YouTube
         </button>
         <button class="yt-btn" onclick="window.open('${ytMusicURL}','_blank')">
@@ -644,20 +644,35 @@ function playOnYouTube(songName) {
           💚 Spotify
         </button>
       </div>
-      <div class="yt-status">🔴 LIVE · Click ▶ Play on YouTube to start song instantly</div>
+      <div class="yt-status" id="yt-status-bar">🔴 LIVE · Click ▶ Play on YouTube to start</div>
     </div>`;
 
   respEl.textContent = `Playing ${songName} on YouTube now!`;
   outxEl.innerHTML = cardHtml;
   speak(`Playing ${songName} on YouTube.`);
 
-  // Send command to laptop to open YouTube + auto click first video
+  // Auto click first video on laptop after YouTube opens
   execCmd('play_youtube', {query: songName}).then(() => {
-    // 3 second baad first video click karo
     setTimeout(() => {
       execCmd('youtube_click_first', {});
-    }, 3000);
+      const statusEl = document.getElementById('yt-status-bar');
+      if(statusEl) statusEl.textContent = '▶ Playing first result automatically...';
+    }, 3500);
   });
+}
+
+function ytAutoPlay(songName, url, btn) {
+  btn.textContent = '⏳ Opening...';
+  btn.disabled = true;
+  window.open(url, '_blank');
+  // Click first video after page loads
+  setTimeout(() => {
+    execCmd('youtube_click_first', {}).then(() => {
+      btn.textContent = '✅ Playing!';
+      const statusEl = document.getElementById('yt-status-bar');
+      if(statusEl) statusEl.textContent = '▶ First video clicked — playing now!';
+    });
+  }, 3500);
 }
 
 // ═══ MAIN COMMAND PROCESSOR ══════════════════════════════════
