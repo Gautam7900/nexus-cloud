@@ -457,14 +457,6 @@ const CATS = [
     {ico:'📝',smp:'"write a note: meeting at 3"',run:()=>processCommand('write a note meeting at 3')},
     {ico:'📋',smp:'"show my notes"',run:()=>processCommand('show my notes')},
     {ico:'😄',smp:'"tell me a joke"',run:()=>processCommand('tell me a joke')},
-  ],},
-  {icon:'🤖',label:'Claude AI',open:true,cmds:[
-    {ico:'🤖',smp:'"what is photosynthesis"',run:()=>processCommand('what is photosynthesis')},
-    {ico:'💡',smp:'"explain quantum computing"',run:()=>processCommand('explain quantum computing')},
-    {ico:'❓',smp:'"who is Elon Musk"',run:()=>processCommand('who is elon musk')},
-    {ico:'🔍',smp:'"difference between AI and ML"',run:()=>processCommand('difference between AI and ML')},
-    {ico:'📚',smp:'"how does gravity work"',run:()=>processCommand('how does gravity work')},
-    {ico:'🇮🇳',smp:'"photosynthesis kya hoti hai"',run:()=>processCommand('photosynthesis kya hoti hai')},
   ]},
 ];
 
@@ -629,8 +621,8 @@ function runTimer(total){
 // Shows a mini player card with direct play button + auto-opens
 function playOnYouTube(songName) {
   const searchQuery = encodeURIComponent(songName);
+  // This URL directly plays first search result on YouTube
   const autoplayURL = `https://www.youtube.com/results?search_query=${searchQuery}`;
-  const ytMusicURL = `https://music.youtube.com/search?q=${searchQuery}`;
 
   const cardHtml = `
     <div class="yt-card">
@@ -642,7 +634,7 @@ function playOnYouTube(songName) {
         </div>
       </div>
       <div class="yt-btns">
-        <button class="yt-btn primary" onclick="ytAutoPlay('${songName}', '${autoplayURL}', this)">
+        <button class="yt-btn primary" onclick="window.open('${autoplayURL}','_blank')">
           ▶ Play on YouTube
         </button>
         <button class="yt-btn" onclick="window.open('${ytMusicURL}','_blank')">
@@ -652,35 +644,20 @@ function playOnYouTube(songName) {
           💚 Spotify
         </button>
       </div>
-      <div class="yt-status" id="yt-status-bar">🔴 LIVE · Click ▶ Play on YouTube to start</div>
+      <div class="yt-status">🔴 LIVE · Click ▶ Play on YouTube to start song instantly</div>
     </div>`;
 
   respEl.textContent = `Playing ${songName} on YouTube now!`;
   outxEl.innerHTML = cardHtml;
   speak(`Playing ${songName} on YouTube.`);
 
-  // Auto click first video on laptop after YouTube opens
+  // Send command to laptop to open YouTube + auto click first video
   execCmd('play_youtube', {query: songName}).then(() => {
+    // 3 second baad first video click karo
     setTimeout(() => {
       execCmd('youtube_click_first', {});
-      const statusEl = document.getElementById('yt-status-bar');
-      if(statusEl) statusEl.textContent = '▶ Playing first result automatically...';
-    }, 3500);
+    }, 3000);
   });
-}
-
-function ytAutoPlay(songName, url, btn) {
-  btn.textContent = '⏳ Opening...';
-  btn.disabled = true;
-  window.open(url, '_blank');
-  // Click first video after page loads
-  setTimeout(() => {
-    execCmd('youtube_click_first', {}).then(() => {
-      btn.textContent = '✅ Playing!';
-      const statusEl = document.getElementById('yt-status-bar');
-      if(statusEl) statusEl.textContent = '▶ First video clicked — playing now!';
-    });
-  }, 3500);
 }
 
 // ═══ MAIN COMMAND PROCESSOR ══════════════════════════════════
@@ -945,12 +922,6 @@ async function processCommand(cmd){
 
   if(/\b(clear|reset)\b/.test(cmd)){outxEl.innerHTML='';return respond('Cleared. Ready for next command.');}
 
-  // ── ASK CLAUDE AI ─────────────────────────────────────────
-  if(/^(ask|question|claude|hey claude|tell me|explain|what is|what are|who is|who are|how to|how does|why is|why does|difference between|define|meaning of)/i.test(cmd)){
-    await askClaude(cmd);
-    return;
-  }
-
   // ── WHATSAPP CALLS ────────────────────────────────────────
   // "call Rahul on whatsapp" / "whatsapp call Rahul"
   // "video call Priya whatsapp"
@@ -1151,21 +1122,8 @@ function aiAssistance(input){
     const f='<div style="margin-top:10px;font-size:.75rem"><div style="padding:4px 0"><span style="color:var(--cyan)">▸</span> Open apps, files & folders</div><div style="padding:4px 0"><span style="color:var(--green)">▸</span> Control volume & brightness</div><div style="padding:4px 0"><span style="color:var(--amber)">▸</span> Search web & open websites</div><div style="padding:4px 0"><span style="color:var(--purple)">▸</span> Set timers & check battery</div><div style="padding:4px 0"><span style="color:var(--cyan)">▸</span> Keyboard shortcuts (copy, paste, save)</div><div style="padding:4px 0"><span style="color:var(--green)">▸</span> Play music on YouTube instantly</div><div style="padding:4px 0"><span style="color:var(--amber)">▸</span> Save & read notes</div></div>';
     return respond('Here are my main capabilities:',f);
   }
-  // ── CLAUDE AI FALLBACK — Har unknown question Claude ko bhejo ──
-  await askClaude(input);
-}
-
-async function askClaude(question) {
-  respond('🤖 Claude se pooch raha hoon...');
-  try {
-    const res = await execCmd('ask_claude', {question: question});
-    let data; try{ data = JSON.parse(res.message); }catch(e){ data = res; }
-    const answer = data.answer || data.message || 'Mujhe is sawaal ka jawab nahi pata.';
-    respondCard(answer, '🤖', 'Claude AI', question, 'success');
-    speak(answer);
-  } catch(e) {
-    respond(`Samajh nahi aaya: "${question}". Try "help" for commands.`);
-  }
+  respond(`I heard: "${input}". Not recognized. Try "help" or "what can you do" to see all commands.`,
+    '<div style="padding:8px;margin-top:8px;background:var(--panel2);border-radius:4px;font-size:.72rem;color:var(--muted)">💬 Browse the command list in the sidebar or ask "help".</div>');
 }
 
 // ═══ CONTACT MANAGER ════════════════════════════════════════
