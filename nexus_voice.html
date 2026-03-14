@@ -707,14 +707,14 @@ async function processCommand(cmd){
   }
 
   // ── MUSIC — UPGRADED WITH AUTO-PLAY YOUTUBE CARD ──────────
-  if(/\b(play|listen to)\b/.test(cmd) && !/display|replay/.test(cmd)){
+  if((/\b(play|listen to)\b/.test(cmd) && !/display|replay/.test(cmd)) || /\byoutube\b/.test(cmd)){
     // Extract song name — strip platform keywords and command words
     let song = cmd
       .replace(/\b(play|listen to|on youtube|on spotify|on soundcloud|on apple music|youtube|spotify|soundcloud)\b/gi,'')
       .trim();
 
-    // If no song name but youtube keyword present — ask what to play
-    if(!song && /youtube/.test(cmd)){
+    // If no song name — ask what to play
+    if(!song){
       return respond('Kaunsa gaana bajana hai? Bolo — "play Believer on YouTube"');
     }
 
