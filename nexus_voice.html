@@ -625,37 +625,46 @@ document.getElementById('lang-hi').classList.toggle('active',currentLanguage==='
 // ── RESPONSIVE VOICE TTS — Natural Indian Voice ─────────────
 
 async function speak(text, cb){
-  // Rec poora destroy karo - apni awaaz detect na ho
+  // Mic poora destroy karo
   try{if(rec){rec.abort();rec.stop();}}catch(e){}
-  rec = null;
-  isRec = false;
+  rec = null; isRec = false;
+  clearTimeout(restTO);
   setState('speaking');
+
+  // Text ki length se bolne ka time estimate karo
+  // Average 130 words per minute = ~2.17 chars per second
+  const estMs = Math.max(2000, (text.length / 2.17) * 1000 * (1/0.88));
 
   function afterSpeak(){
     if(cb) cb();
     setState('idle');
-    // 2.5 second baad naya rec banao
     if(!manPause){
       setTimeout(()=>{
         rec = buildRec();
         schedRestart(200);
-      }, 2500);
+      }, 1000); // 1 sec extra buffer after speech ends
     }
   }
 
+  // Safety timer — agar onend fire na kare toh bhi mic on ho jaye
+  const safetyTimer = setTimeout(()=>{
+    if(curState === 'speaking') afterSpeak();
+  }, estMs + 2000);
+
   try {
     if(typeof responsiveVoice !== 'undefined' && responsiveVoice.voiceSupport()){
-      // Hindi ke liye Hindi Female, English ke liye Indian English
       const voice = currentLanguage==='hi' ? 'Hindi Female' : 'Indian English Female';
       responsiveVoice.speak(text, voice, {
         rate: 0.88, pitch: 1, volume: 1,
-        onend: afterSpeak,
-        onerror: ()=>_speakFallback(text, afterSpeak)
+        onend: ()=>{ clearTimeout(safetyTimer); afterSpeak(); },
+        onerror: ()=>{ clearTimeout(safetyTimer); _speakFallback(text, afterSpeak); }
       });
     } else {
+      clearTimeout(safetyTimer);
       _speakFallback(text, afterSpeak);
     }
   } catch(e) {
+    clearTimeout(safetyTimer);
     _speakFallback(text, afterSpeak);
   }
 }
@@ -774,39 +783,50 @@ async function sendTextInput(){
   const input = document.getElementById('user-text-input');
   const question = input.value.trim();
   if(!question) return;
-  
-  // Show question in tx box
+
   txEl.textContent = question;
   txEl.classList.remove('empty');
   input.value = '';
+
+  // Dono (voice + text) same kaam karenge
+  // Sirf difference: voice ne bola, text ne likha
+  const cmd = question.toLowerCase();
   
-  // Show loading
+  // Show AI output box with loading
   const outBox = document.getElementById('ai-output-box');
   const outBody = document.getElementById('ai-output-body');
   const outQ = document.getElementById('ai-output-question');
   outBox.style.display = 'block';
   outQ.textContent = question;
   outBody.innerHTML = '<div style="color:var(--muted);font-size:0.78rem;padding:4px 0">⏳ Thinking...</div>';
+
+  // Pehle processCommand try karo — agar recognized command hai
+  // Agar nahi toh AI ko bhejo
+  setState('processing');
+  await processCommandOrAI(cmd, outBox, outBody, outQ);
+}
+
+async function processCommandOrAI(cmd, outBox, outBody, outQ){
+  // Try as voice command first
+  const isQuestion = /^(what|who|why|how|when|where|kya|kaun|kaise|kyun|kab|kahan|explain|define|batao|difference|tell me|bata|describe|matlab|meaning)/i.test(cmd);
   
-  // Check if it's a command or question
-  const cmd = question.toLowerCase();
-  
-  // If it looks like a question — send to AI
-  if(/what|who|why|how|when|where|kya|kaun|kaise|kyun|kab|kahan|explain|define|batao|difference|gravity|apple|history|science/i.test(cmd)){
+  if(isQuestion){
+    // AI se answer lo
     try {
-      const res = await execCmd('ask_claude', {question: question});
+      const res = await execCmd('ask_claude', {question: cmd});
       let data; try{ data = JSON.parse(res.message); }catch(e){ data = res; }
       const answer = data.answer || data.message || 'Jawab nahi mila.';
       const formatted = formatAIAnswer(answer);
       outBody.innerHTML = formatted;
-      // speak sirf SPEAK button dabane pe hoga
+      outQ.textContent = cmd;
+      outBox.style.display = 'block';
+      respond(answer); // Voice mein bhi bolega
     } catch(e) {
       outBody.innerHTML = '<div style="color:var(--red)">AI se connect nahi ho saka.</div>';
     }
   } else {
-    // It's a command — process it
+    // Command hai — process karo
     outBox.style.display = 'none';
-    setState('processing');
     await processCommand(cmd);
   }
 }
