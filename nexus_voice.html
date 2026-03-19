@@ -566,19 +566,38 @@ document.getElementById('lang-hi').classList.toggle('active',currentLanguage==='
 
 function speak(text,cb){
   if(!window.speechSynthesis){if(cb)cb();return;}
-  speechSynthesis.cancel();setState('speaking');
+  speechSynthesis.cancel();
+  // ✅ Mic band karo jab Nexus bol raha ho
+  stopRec();
+  setState('speaking');
   function doSpeak(){
     const u=new SpeechSynthesisUtterance(text);
-    u.rate=1.0;u.pitch=0.88;u.volume=1.0;
+    u.rate=0.92;
+    u.pitch=1.0;
+    u.volume=1.0;
     const voices=speechSynthesis.getVoices();
     let v;
     if(currentLanguage==='hi'){
-      v=voices.find(v=>/hindi/i.test(v.lang)||/hi-IN|hi_IN/i.test(v.lang))||voices.find(v=>/^hi/i.test(v.lang))||voices.find(v=>v.lang.startsWith('hi'))||voices[0];
+      v=voices.find(v=>v.lang==='hi-IN')||
+        voices.find(v=>/hi-IN|hi_IN/i.test(v.lang))||
+        voices.find(v=>v.lang.startsWith('hi'));
+      if(v){u.voice=v;}else{u.lang='hi-IN';}
     }else{
-      v=voices.find(v=>/google us English|microsoft zira|microsoft david|alex|samantha|karen|daniel|moira/i.test(v.name))||voices.find(v=>v.lang==='en-US')||voices[0];
+      v=voices.find(v=>/google us english/i.test(v.name))||
+        voices.find(v=>/microsoft david/i.test(v.name))||
+        voices.find(v=>/microsoft zira/i.test(v.name))||
+        voices.find(v=>v.lang==='en-US' && !v.localService)||
+        voices.find(v=>v.lang==='en-US')||
+        voices.find(v=>v.lang==='en-IN')||
+        voices.find(v=>v.lang.startsWith('en'));
+      if(v){u.voice=v;u.lang=v.lang;}
     }
-    if(v){u.voice=v;}else if(currentLanguage==='hi'){u.lang='hi-IN';}
-    u.onend=u.onerror=()=>{if(cb)cb();setState('idle');if(!manPause)schedRestart(450);};
+    u.onend=u.onerror=()=>{
+      if(cb)cb();
+      setState('idle');
+      // ✅ Bolne ke baad thoda wait karo phir mic on karo
+      if(!manPause) setTimeout(()=>schedRestart(300), 800);
+    };
     speechSynthesis.speak(u);
   }
   speechSynthesis.getVoices().length===0?setTimeout(doSpeak,350):doSpeak();
