@@ -565,44 +565,40 @@ function setLanguage(lang){
 document.getElementById('lang-en').classList.toggle('active',currentLanguage==='en');
 document.getElementById('lang-hi').classList.toggle('active',currentLanguage==='hi');
 
-function speak(text,cb){
-  if(!window.speechSynthesis){if(cb)cb();return;}
-  speechSynthesis.cancel();
-  // ✅ Mic band karo jab Nexus bol raha ho
+// ── GOOGLE TTS — Natural Indian Voice ──────────────────────
+let _ttsAudio = null;
+
+async function speak(text, cb){
   stopRec();
   setState('speaking');
-  function doSpeak(){
-    const u=new SpeechSynthesisUtterance(text);
-    u.rate=0.92;
-    u.pitch=1.0;
-    u.volume=1.0;
-    const voices=speechSynthesis.getVoices();
-    let v;
-    if(currentLanguage==='hi'){
-      v=voices.find(v=>v.lang==='hi-IN')||
-        voices.find(v=>/hi-IN|hi_IN/i.test(v.lang))||
-        voices.find(v=>v.lang.startsWith('hi'));
-      if(v){u.voice=v;}else{u.lang='hi-IN';}
-    }else{
-      v=voices.find(v=>/google us english/i.test(v.name))||
-        voices.find(v=>/microsoft david/i.test(v.name))||
-        voices.find(v=>/microsoft zira/i.test(v.name))||
-        voices.find(v=>v.lang==='en-US' && !v.localService)||
-        voices.find(v=>v.lang==='en-US')||
-        voices.find(v=>v.lang==='en-IN')||
-        voices.find(v=>v.lang.startsWith('en'));
-      if(v){u.voice=v;u.lang=v.lang;}
-    }
-    u.onend=u.onerror=()=>{
-      if(cb)cb();
+  if(_ttsAudio){ _ttsAudio.pause(); _ttsAudio.src=''; _ttsAudio=null; }
+  const lang = currentLanguage==='hi' ? 'hi' : 'en';
+  const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=${lang}&client=tw-ob&ttsspeed=0.9`;
+  try {
+    const audio = new Audio(url);
+    _ttsAudio = audio;
+    audio.volume = 1.0;
+    audio.onended = () => {
+      _ttsAudio = null;
+      if(cb) cb();
       setState('idle');
-      // ✅ Bolne ke baad thoda wait karo phir mic on karo
       if(!manPause) setTimeout(()=>schedRestart(300), 800);
     };
-    speechSynthesis.speak(u);
-  }
-  speechSynthesis.getVoices().length===0?setTimeout(doSpeak,350):doSpeak();
+    audio.onerror = () => { _ttsAudio=null; _speakFallback(text,cb); };
+    await audio.play();
+  } catch(e) { _speakFallback(text,cb); }
 }
+
+function _speakFallback(text,cb){
+  if(!window.speechSynthesis){if(cb)cb();return;}
+  speechSynthesis.cancel();
+  const u=new SpeechSynthesisUtterance(text);
+  u.rate=0.92;u.pitch=1.0;u.volume=1.0;
+  u.lang=currentLanguage==='hi'?'hi-IN':'en-IN';
+  u.onend=u.onerror=()=>{if(cb)cb();setState('idle');if(!manPause)setTimeout(()=>schedRestart(300),800);};
+  speechSynthesis.speak(u);
+}
+
 
 function respond(text,extraHtml=''){
   respEl.textContent=text;
