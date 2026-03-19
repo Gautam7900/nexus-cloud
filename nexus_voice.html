@@ -52,6 +52,15 @@ body{background:var(--bg);color:var(--text);font-family:'Share Tech Mono',monosp
 .resp-box::before{content:'NEXUS';position:absolute;top:-1px;left:16px;font-size:0.5rem;letter-spacing:0.25em;color:var(--muted);background:var(--panel);padding:0 7px;}
 .resp-txt{color:var(--green);font-size:0.85rem;line-height:1.7;}
 .out-x{margin-top:10px;}
+.user-input-box{display:flex;gap:8px;margin-top:12px;width:100%;}
+.user-input-box input{flex:1;background:var(--panel2);border:1px solid rgba(0,229,255,0.25);border-radius:8px;padding:10px 14px;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:0.82rem;outline:none;transition:border .2s;}
+.user-input-box input:focus{border-color:var(--cyan);box-shadow:0 0 8px rgba(0,229,255,0.2);}
+.user-input-box input::placeholder{color:var(--muted);}
+.user-input-box button{padding:10px 16px;background:rgba(0,229,255,0.1);border:1px solid rgba(0,229,255,0.3);border-radius:8px;color:var(--cyan);font-family:'Share Tech Mono',monospace;font-size:0.75rem;cursor:pointer;transition:all .2s;letter-spacing:0.08em;white-space:nowrap;}
+.user-input-box button:hover{background:rgba(0,229,255,0.2);border-color:var(--cyan);}
+.ai-output-box{margin-top:12px;background:linear-gradient(135deg,rgba(0,229,255,0.05),rgba(0,255,157,0.03));border:1px solid rgba(0,229,255,0.2);border-radius:12px;overflow:hidden;display:none;}
+.ai-output-header{padding:10px 14px;background:rgba(0,229,255,0.08);border-bottom:1px solid rgba(0,229,255,0.15);display:flex;align-items:center;gap:8px;}
+.ai-output-body{padding:14px 16px;font-size:0.82rem;line-height:1.85;color:var(--text);max-height:300px;overflow-y:auto;}
 .ac{margin-top:8px;padding:10px 13px;border-radius:8px;background:rgba(0,229,255,0.04);border:1px solid rgba(0,229,255,0.13);font-size:0.73rem;display:flex;align-items:center;gap:10px;}
 .ac.success{background:rgba(0,255,157,0.05);border-color:rgba(0,255,157,0.2);}
 .ac.error{background:rgba(255,45,107,0.05);border-color:rgba(255,45,107,0.2);}
@@ -179,6 +188,7 @@ textarea.wa-input{resize:vertical;min-height:80px;line-height:1.6;}
 .wake-hint{font-size:0.57rem;color:var(--muted);letter-spacing:0.1em;text-align:center;}
 .wake-hint span{color:var(--cyan);}
 </style>
+<script src="https://code.responsivevoice.org/responsivevoice.js?key=FREE"></script>
 </head>
 <body>
 <div class="grid-bg"></div>
@@ -217,6 +227,31 @@ textarea.wa-input{resize:vertical;min-height:80px;line-height:1.6;}
     <div class="resp-box" style="width:100%">
       <div class="resp-txt" id="resp">Ready. Tap the orb, then speak a command.</div>
       <div class="out-x" id="outx"></div>
+    </div>
+    <!-- User Text Input Box -->
+    <div class="user-input-box">
+      <input type="text" id="user-text-input" placeholder="Type your question here... (e.g. gravity kya hai)" 
+        onkeydown="if(event.key==='Enter') sendTextInput()"/>
+      <button onclick="sendTextInput()">➤ Send</button>
+    </div>
+    <!-- AI Output Box -->
+    <div class="ai-output-box" id="ai-output-box">
+      <div class="ai-output-header" style="justify-content:space-between;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <img src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='48' fill='none' stroke='%2300e5ff' stroke-width='3'/><circle cx='50' cy='50' r='32' fill='none' stroke='%2300ff9d' stroke-width='2'/><circle cx='50' cy='50' r='18' fill='%2300e5ff' opacity='0.4'/><text x='50' y='62' text-anchor='middle' font-size='38' font-weight='bold' fill='%2300e5ff' font-family='Arial'>N</text></svg>" 
+               width="28" height="28" style="flex-shrink:0"/>
+          <div>
+            <div style="color:var(--cyan);font-size:0.68rem;letter-spacing:0.15em;font-weight:bold;">NEXUS AI</div>
+            <div style="color:var(--muted);font-size:0.58rem;margin-top:1px" id="ai-output-question"></div>
+          </div>
+        </div>
+        <button onclick="speakAIAnswer()" id="ai-speak-btn"
+          style="padding:5px 10px;background:rgba(0,255,157,0.1);border:1px solid rgba(0,255,157,0.3);border-radius:6px;color:#00ff9d;font-size:0.65rem;cursor:pointer;font-family:'Share Tech Mono',monospace;letter-spacing:0.08em;transition:all .2s;"
+          title="Bol ke sunao">
+          🔊 SPEAK
+        </button>
+      </div>
+      <div class="ai-output-body" id="ai-output-body"></div>
     </div>
     <div class="server-warn" id="srv-warn" style="display:none">
       ⚠ <strong>Python server not running.</strong> To enable full laptop control:<br><br>
@@ -565,37 +600,45 @@ function setLanguage(lang){
 document.getElementById('lang-en').classList.toggle('active',currentLanguage==='en');
 document.getElementById('lang-hi').classList.toggle('active',currentLanguage==='hi');
 
-// ── GOOGLE TTS — Natural Indian Voice ──────────────────────
-let _ttsAudio = null;
+// ── RESPONSIVE VOICE TTS — Natural Indian Voice ─────────────
 
 async function speak(text, cb){
   stopRec();
   setState('speaking');
-  if(_ttsAudio){ _ttsAudio.pause(); _ttsAudio.src=''; _ttsAudio=null; }
-  const lang = currentLanguage==='hi' ? 'hi' : 'en';
-  const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=${lang}&client=tw-ob&ttsspeed=0.9`;
+  
   try {
-    const audio = new Audio(url);
-    _ttsAudio = audio;
-    audio.volume = 1.0;
-    audio.onended = () => {
-      _ttsAudio = null;
-      if(cb) cb();
-      setState('idle');
-      if(!manPause) setTimeout(()=>schedRestart(300), 800);
-    };
-    audio.onerror = () => { _ttsAudio=null; _speakFallback(text,cb); };
-    await audio.play();
-  } catch(e) { _speakFallback(text,cb); }
+    if(typeof responsiveVoice !== 'undefined'){
+      const voice = currentLanguage === 'hi' ? 'Hindi Female' : 'UK English Female';
+      responsiveVoice.speak(text, voice, {
+        rate: 0.9,
+        pitch: 1,
+        volume: 1,
+        onend: () => {
+          if(cb) cb();
+          setState('idle');
+          if(!manPause) setTimeout(()=>schedRestart(300), 800);
+        },
+        onerror: () => _speakFallback(text, cb)
+      });
+    } else {
+      _speakFallback(text, cb);
+    }
+  } catch(e) {
+    _speakFallback(text, cb);
+  }
 }
 
-function _speakFallback(text,cb){
+function _speakFallback(text, cb){
   if(!window.speechSynthesis){if(cb)cb();return;}
   speechSynthesis.cancel();
-  const u=new SpeechSynthesisUtterance(text);
-  u.rate=0.92;u.pitch=1.0;u.volume=1.0;
-  u.lang=currentLanguage==='hi'?'hi-IN':'en-IN';
-  u.onend=u.onerror=()=>{if(cb)cb();setState('idle');if(!manPause)setTimeout(()=>schedRestart(300),800);};
+  const u = new SpeechSynthesisUtterance(text);
+  u.rate=0.92; u.pitch=1.0; u.volume=1.0;
+  u.lang = currentLanguage==='hi' ? 'hi-IN' : 'en-IN';
+  u.onend = u.onerror = ()=>{
+    if(cb) cb();
+    setState('idle');
+    if(!manPause) setTimeout(()=>schedRestart(300), 800);
+  };
   speechSynthesis.speak(u);
 }
 
@@ -688,6 +731,81 @@ function ytPlayBtn(songName, btn) {
       if(s) s.textContent = '✅ First video clicked — playing now!';
     }, 3500);
   });
+}
+
+// ═══ TEXT INPUT HANDLER ═════════════════════════════════════
+function speakAIAnswer(){
+  const body = document.getElementById('ai-output-body');
+  if(!body) return;
+  // Extract plain text from HTML
+  const text = body.innerText || body.textContent || '';
+  if(text.trim()) speak(text.trim());
+}
+
+async function sendTextInput(){
+  const input = document.getElementById('user-text-input');
+  const question = input.value.trim();
+  if(!question) return;
+  
+  // Show question in tx box
+  txEl.textContent = question;
+  txEl.classList.remove('empty');
+  input.value = '';
+  
+  // Show loading
+  const outBox = document.getElementById('ai-output-box');
+  const outBody = document.getElementById('ai-output-body');
+  const outQ = document.getElementById('ai-output-question');
+  outBox.style.display = 'block';
+  outQ.textContent = question;
+  outBody.innerHTML = '<div style="color:var(--muted);font-size:0.78rem;padding:4px 0">⏳ Thinking...</div>';
+  
+  // Check if it's a command or question
+  const cmd = question.toLowerCase();
+  
+  // If it looks like a question — send to AI
+  if(/what|who|why|how|when|where|kya|kaun|kaise|kyun|kab|kahan|explain|define|batao|difference|gravity|apple|history|science/i.test(cmd)){
+    try {
+      const res = await execCmd('ask_claude', {question: question});
+      let data; try{ data = JSON.parse(res.message); }catch(e){ data = res; }
+      const answer = data.answer || data.message || 'Jawab nahi mila.';
+      const formatted = formatAIAnswer(answer);
+      outBody.innerHTML = formatted;
+      speak(answer);
+    } catch(e) {
+      outBody.innerHTML = '<div style="color:var(--red)">AI se connect nahi ho saka.</div>';
+    }
+  } else {
+    // It's a command — process it
+    outBox.style.display = 'none';
+    setState('processing');
+    await processCommand(cmd);
+  }
+}
+
+function formatAIAnswer(text){
+  text = text.trim();
+  let lines = text.split(/\n/).filter(l => l.trim());
+  if(lines.length <= 1){
+    const sentences = text.split(/\.\s+/).filter(s => s.trim());
+    if(sentences.length > 1){
+      return sentences.map(s =>
+        `<div style="display:flex;gap:8px;margin-bottom:8px;">
+          <span style="color:var(--cyan);flex-shrink:0">▸</span>
+          <span>${s.trim().replace(/\.$/, '')}.</span>
+        </div>`
+      ).join('');
+    }
+    return `<p style="margin:0">${text}</p>`;
+  }
+  return lines.map(line => {
+    line = line.replace(/^[-•*▸►\d+\.\)]\s*/, '').trim();
+    if(!line) return '';
+    return `<div style="display:flex;gap:8px;margin-bottom:8px;">
+      <span style="color:var(--cyan);flex-shrink:0">▸</span>
+      <span>${line}</span>
+    </div>`;
+  }).join('');
 }
 
 // ═══ MAIN COMMAND PROCESSOR ══════════════════════════════════
@@ -1168,7 +1286,7 @@ async function askClaude(question) {
     const res = await execCmd('ask_claude', {question: question});
     let data; try{ data = JSON.parse(res.message); }catch(e){ data = res; }
     const answer = data.answer || data.message || 'Mujhe jawab nahi pata.';
-    respondCard(answer, '🤖', 'Claude AI', question, 'success');
+    respondCard(answer, '🔵', 'NEXUS AI', question, 'success');
     speak(answer);
   } catch(e) {
     respond('Claude se connect nahi ho saka.');
