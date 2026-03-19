@@ -48,9 +48,9 @@ body{background:var(--bg);color:var(--text);font-family:'Share Tech Mono',monosp
 .tx-lbl{font-size:0.56rem;letter-spacing:0.22em;color:var(--muted);text-transform:uppercase;margin-bottom:5px;text-align:center;}
 .tx-txt{font-size:1rem;color:var(--cyan);min-height:26px;word-wrap:break-word;line-height:1.5;padding:0 10px;text-align:center;}
 .tx-txt.empty{color:var(--muted);font-size:0.76rem;font-style:italic;}
-.resp-box{width:100%;background:var(--panel);border:1px solid var(--b);border-radius:10px;padding:14px 18px;position:relative;min-height:66px;}
+.resp-box{width:100%;background:var(--panel);border:1px solid var(--b);border-radius:10px;padding:16px 20px;position:relative;min-height:100px;max-height:70vh;overflow-y:auto;}
 .resp-box::before{content:'NEXUS';position:absolute;top:-1px;left:16px;font-size:0.5rem;letter-spacing:0.25em;color:var(--muted);background:var(--panel);padding:0 7px;}
-.resp-txt{color:var(--green);font-size:0.85rem;line-height:1.7;}
+.resp-txt{color:var(--green);font-size:0.92rem;line-height:1.8;}
 .out-x{margin-top:10px;}
 .ac{margin-top:8px;padding:10px 13px;border-radius:8px;background:rgba(0,229,255,0.04);border:1px solid rgba(0,229,255,0.13);font-size:0.73rem;display:flex;align-items:center;gap:10px;}
 .ac.success{background:rgba(0,255,157,0.05);border-color:rgba(0,255,157,0.2);}
@@ -1166,16 +1166,71 @@ async function aiAssistance(input){
 }
 
 async function askClaude(question) {
-  respond('🤖 Claude se pooch raha hoon...');
+  respond('🤖 AI se pooch raha hoon...');
+  outxEl.innerHTML = `<div style="padding:12px;background:var(--panel2);border-radius:8px;border:1px solid rgba(0,229,255,0.2);animation:pulse 1s infinite">
+    <div style="color:var(--cyan);font-size:0.7rem;letter-spacing:0.1em">⏳ THINKING...</div>
+  </div>`;
   try {
     const res = await execCmd('ask_claude', {question: question});
     let data; try{ data = JSON.parse(res.message); }catch(e){ data = res; }
     const answer = data.answer || data.message || 'Mujhe jawab nahi pata.';
-    respondCard(answer, '🤖', 'Claude AI', question, 'success');
+    
+    // Format answer with bullet points and sections
+    const formatted = formatAIAnswer(answer);
+    
+    respEl.textContent = question;
+    outxEl.innerHTML = `
+      <div style="margin-top:10px;background:linear-gradient(135deg,rgba(0,229,255,0.06),rgba(0,255,157,0.04));border:1px solid rgba(0,229,255,0.25);border-radius:12px;overflow:hidden;">
+        <div style="padding:10px 14px;background:rgba(0,229,255,0.08);border-bottom:1px solid rgba(0,229,255,0.15);display:flex;align-items:center;gap:8px;">
+          <span style="font-size:1.3rem">🤖</span>
+          <div>
+            <div style="color:var(--cyan);font-size:0.68rem;letter-spacing:0.15em;font-weight:bold;">AI ANSWER</div>
+            <div style="color:var(--muted);font-size:0.58rem;margin-top:1px">${question}</div>
+          </div>
+        </div>
+        <div style="padding:14px 16px;font-size:0.82rem;line-height:1.85;color:var(--text);">
+          ${formatted}
+        </div>
+      </div>`;
     speak(answer);
   } catch(e) {
-    respond('Claude se connect nahi ho saka.');
+    outxEl.innerHTML = '';
+    respond('AI se connect nahi ho saka.');
   }
+}
+
+function formatAIAnswer(text) {
+  // Clean up text
+  text = text.trim();
+  
+  // Split into sentences/points
+  let lines = text.split(/\n/).filter(l => l.trim());
+  
+  if(lines.length <= 1) {
+    // Single line — split by '. ' into points
+    const sentences = text.split(/\.\s+/).filter(s => s.trim());
+    if(sentences.length > 1) {
+      return sentences.map(s => 
+        `<div style="display:flex;gap:8px;margin-bottom:8px;">
+          <span style="color:var(--cyan);flex-shrink:0;margin-top:2px">▸</span>
+          <span>${s.trim().replace(/\.$/, '')}.</span>
+        </div>`
+      ).join('');
+    }
+    return `<p style="margin:0">${text}</p>`;
+  }
+  
+  // Multiple lines — show as points
+  return lines.map(line => {
+    line = line.trim();
+    // Remove existing bullet chars
+    line = line.replace(/^[-•*▸►]\s*/, '');
+    if(!line) return '';
+    return `<div style="display:flex;gap:8px;margin-bottom:8px;">
+      <span style="color:var(--cyan);flex-shrink:0;margin-top:2px">▸</span>
+      <span>${line}</span>
+    </div>`;
+  }).join('');
 }
 
 // ═══ CONTACT MANAGER ════════════════════════════════════════
