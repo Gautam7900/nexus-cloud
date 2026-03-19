@@ -621,8 +621,8 @@ function runTimer(total){
 // Shows a mini player card with direct play button + auto-opens
 function playOnYouTube(songName) {
   const searchQuery = encodeURIComponent(songName);
-  // This URL directly plays first search result on YouTube
   const autoplayURL = `https://www.youtube.com/results?search_query=${searchQuery}`;
+  const ytMusicURL = `https://music.youtube.com/search?q=${searchQuery}`;
 
   const cardHtml = `
     <div class="yt-card">
@@ -634,7 +634,7 @@ function playOnYouTube(songName) {
         </div>
       </div>
       <div class="yt-btns">
-        <button class="yt-btn primary" onclick="window.open('${autoplayURL}','_blank')">
+        <button class="yt-btn primary" id="yt-play-btn" onclick="ytPlayBtn('${songName}', this)">
           ▶ Play on YouTube
         </button>
         <button class="yt-btn" onclick="window.open('${ytMusicURL}','_blank')">
@@ -644,19 +644,33 @@ function playOnYouTube(songName) {
           💚 Spotify
         </button>
       </div>
-      <div class="yt-status">🔴 LIVE · Click ▶ Play on YouTube to start song instantly</div>
+      <div class="yt-status" id="yt-status-bar">▶ Playing first result automatically...</div>
     </div>`;
 
   respEl.textContent = `Playing ${songName} on YouTube now!`;
   outxEl.innerHTML = cardHtml;
   speak(`Playing ${songName} on YouTube.`);
 
-  // Send command to laptop to open YouTube + auto click first video
+  // Voice se aaya — auto open + auto click
   execCmd('play_youtube', {query: songName}).then(() => {
-    // 3 second baad first video click karo
     setTimeout(() => {
       execCmd('youtube_click_first', {});
-    }, 3000);
+      const s = document.getElementById('yt-status-bar');
+      if(s) s.textContent = '✅ First video clicked — playing now!';
+    }, 3500);
+  });
+}
+
+function ytPlayBtn(songName, btn) {
+  btn.textContent = '⏳ Opening...';
+  btn.disabled = true;
+  execCmd('play_youtube', {query: songName}).then(() => {
+    setTimeout(() => {
+      execCmd('youtube_click_first', {});
+      btn.textContent = '✅ Playing!';
+      const s = document.getElementById('yt-status-bar');
+      if(s) s.textContent = '✅ First video clicked — playing now!';
+    }, 3500);
   });
 }
 
@@ -1556,14 +1570,4 @@ if(window.speechSynthesis){speechSynthesis.onvoiceschanged=()=>speechSynthesis.g
 setState('idle');stxtEl.textContent='Tap the orb to start';
 </script>
 </body>
-</html> 
-
-
-
-
-
-
-
-
-
-
+</html>
