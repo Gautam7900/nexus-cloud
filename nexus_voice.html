@@ -48,8 +48,8 @@ body{background:var(--bg);color:var(--text);font-family:'Share Tech Mono',monosp
 .tx-lbl{font-size:0.56rem;letter-spacing:0.22em;color:var(--muted);text-transform:uppercase;margin-bottom:5px;text-align:center;}
 .tx-txt{font-size:1rem;color:var(--cyan);min-height:26px;word-wrap:break-word;line-height:1.5;padding:0 10px;text-align:center;}
 .tx-txt.empty{color:var(--muted);font-size:0.76rem;font-style:italic;}
-.resp-box{width:100%;background:var(--panel);border:1px solid var(--b);border-radius:10px;padding:14px 18px;position:relative;min-height:66px;}
-.resp-box::before{content:'NEXUS';position:absolute;top:-1px;left:16px;font-size:0.5rem;letter-spacing:0.25em;color:var(--muted);background:var(--panel);padding:0 7px;}
+.resp-box{width:100%;background:var(--panel);border:1px solid var(--b);border-radius:12px;padding:0;position:relative;overflow:hidden;}
+.resp-box::before{content:'NEXUS';position:absolute;top:-1px;left:16px;font-size:0.5rem;letter-spacing:0.25em;color:var(--muted);background:var(--panel);padding:0 7px;z-index:1;}
 .resp-txt{color:var(--green);font-size:0.85rem;line-height:1.7;}
 .out-x{margin-top:10px;}
 .user-input-box{display:flex;gap:8px;margin-top:12px;width:100%;}
@@ -224,34 +224,43 @@ textarea.wa-input{resize:vertical;min-height:80px;line-height:1.6;}
       <div class="tx-lbl">// You Said</div>
       <div class="tx-txt empty" id="tx">Tap the orb to begin voice control...</div>
     </div>
+    <!-- Unified NEXUS Box -->
     <div class="resp-box" style="width:100%">
-      <div class="resp-txt" id="resp">Ready. Tap the orb, then speak a command.</div>
-      <div class="out-x" id="outx"></div>
-    </div>
-    <!-- User Text Input Box -->
-    <div class="user-input-box">
-      <input type="text" id="user-text-input" placeholder="Type your question here... (e.g. gravity kya hai)" 
-        onkeydown="if(event.key==='Enter') sendTextInput()"/>
-      <button onclick="sendTextInput()">➤ Send</button>
-    </div>
-    <!-- AI Output Box -->
-    <div class="ai-output-box" id="ai-output-box">
-      <div class="ai-output-header" style="justify-content:space-between;">
-        <div style="display:flex;align-items:center;gap:8px;">
-          <img src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='48' fill='none' stroke='%2300e5ff' stroke-width='3'/><circle cx='50' cy='50' r='32' fill='none' stroke='%2300ff9d' stroke-width='2'/><circle cx='50' cy='50' r='18' fill='%2300e5ff' opacity='0.4'/><text x='50' y='62' text-anchor='middle' font-size='38' font-weight='bold' fill='%2300e5ff' font-family='Arial'>N</text></svg>" 
-               width="28" height="28" style="flex-shrink:0"/>
-          <div>
-            <div style="color:var(--cyan);font-size:0.68rem;letter-spacing:0.15em;font-weight:bold;">NEXUS AI</div>
-            <div style="color:var(--muted);font-size:0.58rem;margin-top:1px" id="ai-output-question"></div>
-          </div>
-        </div>
-        <button onclick="speakAIAnswer()" id="ai-speak-btn"
-          style="padding:5px 10px;background:rgba(0,255,157,0.1);border:1px solid rgba(0,255,157,0.3);border-radius:6px;color:#00ff9d;font-size:0.65rem;cursor:pointer;font-family:'Share Tech Mono',monospace;letter-spacing:0.08em;transition:all .2s;"
-          title="Bol ke sunao">
-          🔊 SPEAK
+      <!-- Top: Nexus Response -->
+      <div style="padding:14px 18px;min-height:52px;border-bottom:1px solid rgba(0,229,255,0.08);">
+        <div class="resp-txt" id="resp">Ready. Tap the orb, then speak a command.</div>
+        <div class="out-x" id="outx"></div>
+      </div>
+      <!-- Middle: Text Input -->
+      <div style="display:flex;gap:0;border-bottom:1px solid rgba(0,229,255,0.08);">
+        <input type="text" id="user-text-input" 
+          placeholder="Type command or question here... (Enter dabao ya Send karo)"
+          onkeydown="if(event.key==='Enter') sendTextInput()"
+          style="flex:1;background:transparent;border:none;padding:12px 16px;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:0.82rem;outline:none;"/>
+        <button onclick="sendTextInput()"
+          style="padding:12px 18px;background:rgba(0,229,255,0.08);border:none;border-left:1px solid rgba(0,229,255,0.15);color:var(--cyan);font-family:'Share Tech Mono',monospace;font-size:0.72rem;cursor:pointer;transition:all .2s;letter-spacing:0.08em;"
+          onmouseover="this.style.background='rgba(0,229,255,0.18)'" 
+          onmouseout="this.style.background='rgba(0,229,255,0.08)'">
+          ➤ SEND
         </button>
       </div>
-      <div class="ai-output-body" id="ai-output-body"></div>
+      <!-- Bottom: AI Output -->
+      <div id="ai-output-box" style="display:none;">
+        <div style="padding:10px 16px;background:rgba(0,229,255,0.05);border-bottom:1px solid rgba(0,229,255,0.1);display:flex;align-items:center;justify-content:space-between;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <img src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='48' fill='none' stroke='%2300e5ff' stroke-width='3'/><circle cx='50' cy='50' r='32' fill='none' stroke='%2300ff9d' stroke-width='2'/><circle cx='50' cy='50' r='18' fill='%2300e5ff' opacity='0.4'/><text x='50' y='62' text-anchor='middle' font-size='38' font-weight='bold' fill='%2300e5ff' font-family='Arial'>N</text></svg>" width="24" height="24" style="flex-shrink:0"/>
+            <div>
+              <div style="color:var(--cyan);font-size:0.65rem;letter-spacing:0.15em;font-weight:bold;">NEXUS AI</div>
+              <div style="color:var(--muted);font-size:0.56rem;margin-top:1px" id="ai-output-question"></div>
+            </div>
+          </div>
+          <button onclick="speakAIAnswer()"
+            style="padding:4px 10px;background:rgba(0,255,157,0.1);border:1px solid rgba(0,255,157,0.3);border-radius:6px;color:#00ff9d;font-size:0.62rem;cursor:pointer;font-family:'Share Tech Mono',monospace;letter-spacing:0.08em;">
+            🔊 SPEAK
+          </button>
+        </div>
+        <div class="ai-output-body" id="ai-output-body" style="padding:14px 16px;font-size:0.82rem;line-height:1.85;color:var(--text);max-height:280px;overflow-y:auto;"></div>
+      </div>
     </div>
     <div class="server-warn" id="srv-warn" style="display:none">
       ⚠ <strong>Python server not running.</strong> To enable full laptop control:<br><br>
@@ -577,8 +586,21 @@ function buildRec(){
   return r;
 }
 
-function startRec(){if(isRec||manPause)return;try{rec.start();}catch(e){schedRestart(800);}}
-function stopRec(){try{rec.abort();}catch(e){}try{rec.stop();}catch(e){}isRec=false;}
+function startRec(){
+  if(isRec||manPause) return;
+  if(!rec) rec=buildRec();  // Rebuild if destroyed
+  if(!rec) return;
+  try{rec.start();}catch(e){schedRestart(800);}
+}
+function stopRec(){
+  try{rec.abort();}catch(e){}
+  try{rec.stop();}catch(e){}
+  isRec=false;
+  rec=null; // Completely destroy
+}
+function rebuildRec(){
+  rec=buildRec();
+}
 function schedRestart(ms=350){clearTimeout(restTO);restTO=setTimeout(()=>{if(!manPause&&!isRec&&curState!=='speaking'){setState('listening');startRec();}},ms);}
 
 let speechUnlocked=false;
@@ -603,28 +625,38 @@ document.getElementById('lang-hi').classList.toggle('active',currentLanguage==='
 // ── RESPONSIVE VOICE TTS — Natural Indian Voice ─────────────
 
 async function speak(text, cb){
-  stopRec();
+  // Rec poora destroy karo - apni awaaz detect na ho
+  try{if(rec){rec.abort();rec.stop();}}catch(e){}
+  rec = null;
+  isRec = false;
   setState('speaking');
-  
+
+  function afterSpeak(){
+    if(cb) cb();
+    setState('idle');
+    // 2.5 second baad naya rec banao
+    if(!manPause){
+      setTimeout(()=>{
+        rec = buildRec();
+        schedRestart(200);
+      }, 2500);
+    }
+  }
+
   try {
-    if(typeof responsiveVoice !== 'undefined'){
-      const voice = currentLanguage === 'hi' ? 'Hindi Female' : 'UK English Female';
+    if(typeof responsiveVoice !== 'undefined' && responsiveVoice.voiceSupport()){
+      // Hindi ke liye Hindi Female, English ke liye Indian English
+      const voice = currentLanguage==='hi' ? 'Hindi Female' : 'Indian English Female';
       responsiveVoice.speak(text, voice, {
-        rate: 0.9,
-        pitch: 1,
-        volume: 1,
-        onend: () => {
-          if(cb) cb();
-          setState('idle');
-          if(!manPause) setTimeout(()=>schedRestart(300), 800);
-        },
-        onerror: () => _speakFallback(text, cb)
+        rate: 0.88, pitch: 1, volume: 1,
+        onend: afterSpeak,
+        onerror: ()=>_speakFallback(text, afterSpeak)
       });
     } else {
-      _speakFallback(text, cb);
+      _speakFallback(text, afterSpeak);
     }
   } catch(e) {
-    _speakFallback(text, cb);
+    _speakFallback(text, afterSpeak);
   }
 }
 
@@ -634,11 +666,7 @@ function _speakFallback(text, cb){
   const u = new SpeechSynthesisUtterance(text);
   u.rate=0.92; u.pitch=1.0; u.volume=1.0;
   u.lang = currentLanguage==='hi' ? 'hi-IN' : 'en-IN';
-  u.onend = u.onerror = ()=>{
-    if(cb) cb();
-    setState('idle');
-    if(!manPause) setTimeout(()=>schedRestart(300), 800);
-  };
+  u.onend = u.onerror = cb || (()=>{});
   speechSynthesis.speak(u);
 }
 
@@ -771,7 +799,7 @@ async function sendTextInput(){
       const answer = data.answer || data.message || 'Jawab nahi mila.';
       const formatted = formatAIAnswer(answer);
       outBody.innerHTML = formatted;
-      speak(answer);
+      // speak sirf SPEAK button dabane pe hoga
     } catch(e) {
       outBody.innerHTML = '<div style="color:var(--red)">AI se connect nahi ho saka.</div>';
     }
