@@ -518,8 +518,7 @@ function buildRec(){
   r.maxAlternatives=3;
   r.onstart=()=>{isRec=true;if(!manPause)setState('listening');};
   r.onresult=(e)=>{
-    // ✅ Nexus bol raha ho toh apni awaaz ignore karo
-    if(window._isSpeaking || curState==='speaking' || curState==='processing') return;
+    if(curState==='speaking')return;
     let interim='',final='';
     for(let i=e.resultIndex;i<e.results.length;i++){
       const t=e.results[i][0].transcript;
@@ -544,11 +543,7 @@ function buildRec(){
 }
 
 function startRec(){if(isRec||manPause)return;try{rec.start();}catch(e){schedRestart(800);}}
-function stopRec(){
-  try{rec.abort();}catch(e){}  // abort is more forceful than stop
-  try{rec.stop();}catch(e){}
-  isRec=false;
-}
+function stopRec(){try{rec.abort();}catch(e){}try{rec.stop();}catch(e){}isRec=false;}
 function schedRestart(ms=350){clearTimeout(restTO);restTO=setTimeout(()=>{if(!manPause&&!isRec&&curState!=='speaking'){setState('listening');startRec();}},ms);}
 
 let speechUnlocked=false;
@@ -573,11 +568,8 @@ document.getElementById('lang-hi').classList.toggle('active',currentLanguage==='
 function speak(text,cb){
   if(!window.speechSynthesis){if(cb)cb();return;}
   speechSynthesis.cancel();
-  // ✅ Mic completely abort karo
-  window._isSpeaking = true;
-  try{rec.abort();}catch(e){}
-  try{rec.stop();}catch(e){}
-  isRec = false;
+  // ✅ Mic band karo jab Nexus bol raha ho
+  stopRec();
   setState('speaking');
   function doSpeak(){
     const u=new SpeechSynthesisUtterance(text);
@@ -604,9 +596,8 @@ function speak(text,cb){
     u.onend=u.onerror=()=>{
       if(cb)cb();
       setState('idle');
-      // Bolne ke baad 2.5 second wait — apni awaaz capture na ho
-      window._isSpeaking = false;
-      if(!manPause) setTimeout(()=>schedRestart(300), 2500);
+      // ✅ Bolne ke baad thoda wait karo phir mic on karo
+      if(!manPause) setTimeout(()=>schedRestart(300), 800);
     };
     speechSynthesis.speak(u);
   }
