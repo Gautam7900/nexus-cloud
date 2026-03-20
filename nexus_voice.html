@@ -657,28 +657,7 @@ async function speak(text, cb){
   window._lastSpokenText = text;
   setState('speaking');
 
-  // ElevenLabs TTS try karo pehle
-  try {
-    const lang = currentLanguage === 'hi' ? 'hi' : 'en';
-    const res = await execCmd('elevenlabs_tts', {text: text, lang: lang});
-    let data; try{ data = JSON.parse(res.message); }catch(e){ data = res; }
-    if(data.ok && data.audio_b64){
-      const audioBlob = base64ToBlob(data.audio_b64, 'audio/mpeg');
-      const audioUrl = URL.createObjectURL(audioBlob);
-      const audio = new Audio(audioUrl);
-      window._currentAudio = audio;
-      audio.onended = () => {
-        URL.revokeObjectURL(audioUrl);
-        window._currentAudio = null;
-        afterSpeak();
-      };
-      audio.onerror = () => { afterSpeak(); };
-      await audio.play();
-      return; // ElevenLabs se chal gaya!
-    }
-  } catch(e) {
-    console.log('[TTS] ElevenLabs failed, using fallback:', e);
-  }
+  // ResponsiveVoice use karo directly
 
   // Text ki length se bolne ka time estimate karo
   // Average 130 words per minute = ~2.17 chars per second
@@ -690,11 +669,11 @@ async function speak(text, cb){
     window._nexusSpeaking = false;
     if(!manPause){
       setTimeout(()=>{
-        window._micBlocked = false;   // Mic unblock
+        window._micBlocked = false;
         window._lastSpokenText = '';
         rec = buildRec();
         schedRestart(200);
-      }, 2000); // 2 sec buffer
+      }, 4000); // 4 sec buffer — apni awaaz detect na ho
     } else {
       window._micBlocked = false;
     }
@@ -735,9 +714,29 @@ function _speakFallback(text, cb){
 
 
 function respond(text,extraHtml=''){
+  // Sirf resp box mein dikhao (commands ke liye)
   respEl.textContent=text;
   outxEl.innerHTML=extraHtml;
   speak(text);
+}
+
+function showAnswer(question, answer, formatted){
+  // Ek hi unified output — dono voice aur text ke liye
+  const outBox = document.getElementById('ai-output-box');
+  const outBody = document.getElementById('ai-output-body');
+  const outQ = document.getElementById('ai-output-question');
+  
+  // Pehla clear karo
+  outxEl.innerHTML = '';
+  respEl.textContent = question;
+  
+  // AI box show karo
+  outQ.textContent = question;
+  outBody.innerHTML = formatted;
+  outBox.style.display = 'block';
+  
+  // Scroll to answer
+  setTimeout(()=>outBox.scrollIntoView({behavior:'smooth', block:'nearest'}), 100);
 }
 
 function respondCard(text,ico,title,sub,cardClass=''){
@@ -882,10 +881,8 @@ async function processCommandOrAI(cmd, outBox, outBody, outQ){
       let data; try{ data = JSON.parse(res.message); }catch(e){ data = res; }
       const answer = data.answer || data.message || 'Jawab nahi mila.';
       const formatted = formatAIAnswer(answer);
-      outBody.innerHTML = formatted;
-      outQ.textContent = cmd;
-      outBox.style.display = 'block';
-      respond(answer); // Voice mein bhi bolega
+      showAnswer(cmd, answer, formatted);
+      speak(answer);
     } catch(e) {
       outBody.innerHTML = '<div style="color:var(--red)">AI se connect nahi ho saka.</div>';
     }
@@ -1408,19 +1405,20 @@ async function aiAssistance(input){
 }
 
 async function askClaude(question) {
-  // Purana output clear karo
+  // Clear previous
   outxEl.innerHTML = '';
   const aiBox = document.getElementById('ai-output-box');
   if(aiBox) aiBox.style.display = 'none';
-  respond('🤖 Pooch raha hoon...');
+  respEl.textContent = '⏳ Pooch raha hoon...';
   try {
     const res = await execCmd('ask_claude', {question: question});
     let data; try{ data = JSON.parse(res.message); }catch(e){ data = res; }
-    const answer = data.answer || data.message || 'Mujhe jawab nahi pata.';
-    respondCard(answer, '🔵', 'NEXUS AI', question, 'success');
+    const answer = data.answer || data.message || 'Jawab nahi mila.';
+    const formatted = formatAIAnswer(answer);
+    showAnswer(question, answer, formatted);
     speak(answer);
   } catch(e) {
-    respond('Claude se connect nahi ho saka.');
+    respond('AI se connect nahi ho saka.');
   }
 }
 
