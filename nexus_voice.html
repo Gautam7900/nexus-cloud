@@ -868,6 +868,10 @@ async function sendTextInput(){
 }
 
 async function processCommandOrAI(cmd, outBox, outBody, outQ){
+  // Purana output clear karo
+  outxEl.innerHTML = '';
+  const prevAiBox = document.getElementById('ai-output-box');
+  if(prevAiBox) prevAiBox.style.display = 'none';
   // Try as voice command first
   const isQuestion = /^(what|who|why|how|when|where|kya|kaun|kaise|kyun|kab|kahan|explain|define|batao|difference|tell me|bata|describe|matlab|meaning)/i.test(cmd);
   
@@ -1404,7 +1408,11 @@ async function aiAssistance(input){
 }
 
 async function askClaude(question) {
-  respond('🤖 Claude se pooch raha hoon...');
+  // Purana output clear karo
+  outxEl.innerHTML = '';
+  const aiBox = document.getElementById('ai-output-box');
+  if(aiBox) aiBox.style.display = 'none';
+  respond('🤖 Pooch raha hoon...');
   try {
     const res = await execCmd('ask_claude', {question: question});
     let data; try{ data = JSON.parse(res.message); }catch(e){ data = res; }
