@@ -562,9 +562,11 @@ function buildRec(){
   r.maxAlternatives=3;
   r.onstart=()=>{isRec=true;if(!manPause)setState('listening');};
   r.onresult=(e)=>{
-    // Agar Nexus bol raha hai ya abhi abhi bola — ignore karo
-    if(curState==='speaking') return;
+    // STRICT: Agar speaking/processing state hai — absolutely ignore
+    if(curState==='speaking' || curState==='processing') return;
     if(window._nexusSpeaking) return;
+    if(window._micBlocked) return;
+
     let interim='',final='';
     for(let i=e.resultIndex;i<e.results.length;i++){
       const t=e.results[i][0].transcript;
@@ -574,15 +576,26 @@ function buildRec(){
     if(d){txEl.textContent=d;txEl.classList.remove('empty');}
     if(final.trim()){
       const cmd=final.trim().toLowerCase();
-      // Agar recently bola hua text match kare — ignore (loop prevention)
+
+      // Self-echo check — last spoken text se compare
       if(window._lastSpokenText){
-        const spoken = window._lastSpokenText.toLowerCase().substring(0,40);
-        if(cmd.includes(spoken.substring(0,20)) || spoken.includes(cmd.substring(0,20))){
-          console.log('[MIC] Ignored self-echo:', cmd.substring(0,30));
+        const spoken = window._lastSpokenText.toLowerCase();
+        const cmdWords = cmd.replace(/[^a-z0-9 ]/g,'').split(' ').filter(w=>w.length>3);
+        const spokenClean = spoken.replace(/[^a-z0-9 ]/g,'');
+        const matchCount = cmdWords.filter(w=>spokenClean.includes(w)).length;
+        if(cmdWords.length > 0 && matchCount/cmdWords.length > 0.35){
+          console.log('[MIC] Self-echo blocked:', cmd.substring(0,40));
           return;
         }
       }
-      if(manPause){if(/hey nexus|nexus wake|wake up/.test(cmd)){manPause=false;schedRestart(200);}return;}
+
+      // Too short commands ignore (noise)
+      if(cmd.length < 3) return;
+
+      if(manPause){
+        if(/hey nexus|nexus wake|wake up/.test(cmd)){manPause=false;schedRestart(200);}
+        return;
+      }
       setState('processing');
       setTimeout(()=>processCommand(cmd),200);
     }
@@ -640,8 +653,32 @@ async function speak(text, cb){
   rec = null; isRec = false;
   clearTimeout(restTO);
   window._nexusSpeaking = true;
-  window._lastSpokenText = text; // Remember what we said
+  window._micBlocked = true;  // Hard block mic
+  window._lastSpokenText = text;
   setState('speaking');
+
+  // ElevenLabs TTS try karo pehle
+  try {
+    const lang = currentLanguage === 'hi' ? 'hi' : 'en';
+    const res = await execCmd('elevenlabs_tts', {text: text, lang: lang});
+    let data; try{ data = JSON.parse(res.message); }catch(e){ data = res; }
+    if(data.ok && data.audio_b64){
+      const audioBlob = base64ToBlob(data.audio_b64, 'audio/mpeg');
+      const audioUrl = URL.createObjectURL(audioBlob);
+      const audio = new Audio(audioUrl);
+      window._currentAudio = audio;
+      audio.onended = () => {
+        URL.revokeObjectURL(audioUrl);
+        window._currentAudio = null;
+        afterSpeak();
+      };
+      audio.onerror = () => { afterSpeak(); };
+      await audio.play();
+      return; // ElevenLabs se chal gaya!
+    }
+  } catch(e) {
+    console.log('[TTS] ElevenLabs failed, using fallback:', e);
+  }
 
   // Text ki length se bolne ka time estimate karo
   // Average 130 words per minute = ~2.17 chars per second
@@ -653,10 +690,13 @@ async function speak(text, cb){
     window._nexusSpeaking = false;
     if(!manPause){
       setTimeout(()=>{
-        window._lastSpokenText = ''; // Clear after safe delay
+        window._micBlocked = false;   // Mic unblock
+        window._lastSpokenText = '';
         rec = buildRec();
         schedRestart(200);
-      }, 1500); // 1.5 sec extra buffer
+      }, 2000); // 2 sec buffer
+    } else {
+      window._micBlocked = false;
     }
   }
 
@@ -785,6 +825,13 @@ function ytPlayBtn(songName, btn) {
 }
 
 // ═══ TEXT INPUT HANDLER ═════════════════════════════════════
+function base64ToBlob(b64, mimeType){
+  const bytes = atob(b64);
+  const arr = new Uint8Array(bytes.length);
+  for(let i=0;i<bytes.length;i++) arr[i]=bytes.charCodeAt(i);
+  return new Blob([arr], {type: mimeType});
+}
+
 function speakAIAnswer(){
   const body = document.getElementById('ai-output-body');
   if(!body) return;
@@ -1133,7 +1180,8 @@ async function processCommand(cmd){
   if(/\b(clear|reset)\b/.test(cmd)){outxEl.innerHTML='';return respond('Cleared. Ready for next command.');}
 
   // ── GREETINGS — Local handle ──────────────────────────────
-  if(/^(hi|hello|hey|hii|helo|namaste|namaskar|kesi ho|kaisi ho|kaisa ho|kese ho|kya haal|how are you|sup|what's up|whats up|hows it going)/i.test(cmd)){
+  if(/^(hi|hello|hey|hii|helo|namaste|namaskar)/i.test(cmd) ||
+     /(kesi ho|kaisi ho|kaisa ho|kese ho|kya haal|how are you|kya kar rahi|kya karti|kya karta|kaun ho|what do you do|tell me about yourself|apne bare|apna naam)/i.test(cmd)){
     const greetings = [
       'Main bilkul theek hoon! Aap kaise hain? 😊',
       'Main badhiya hoon, shukriya! Aap sunao, kya haal hai?',
