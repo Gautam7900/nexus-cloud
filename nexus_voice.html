@@ -657,7 +657,29 @@ async function speak(text, cb){
   window._lastSpokenText = text;
   setState('speaking');
 
-  // ResponsiveVoice use karo directly
+  // ElevenLabs TTS try karo pehle — natural human voice
+  try {
+    const lang = currentLanguage === 'hi' ? 'hi' : 'en';
+    const res = await execCmd('elevenlabs_tts', {text: text, lang: lang});
+    let data; try{ data = JSON.parse(res.message); }catch(e){ data = res; }
+    if(data.ok && data.audio_b64){
+      const audioBlob = base64ToBlob(data.audio_b64, 'audio/mpeg');
+      const audioUrl = URL.createObjectURL(audioBlob);
+      const audio = new Audio(audioUrl);
+      window._currentAudio = audio;
+      audio.onended = () => {
+        URL.revokeObjectURL(audioUrl);
+        window._currentAudio = null;
+        afterSpeak();
+      };
+      audio.onerror = () => { afterSpeak(); };
+      await audio.play();
+      return;
+    }
+  } catch(e) {
+    console.log('[TTS] ElevenLabs failed, using fallback');
+  }
+  // Fallback — ResponsiveVoice/Browser
 
   // Text ki length se bolne ka time estimate karo
   // Average 130 words per minute = ~2.17 chars per second
@@ -706,8 +728,39 @@ function _speakFallback(text, cb){
   if(!window.speechSynthesis){if(cb)cb();return;}
   speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(text);
-  u.rate=0.92; u.pitch=1.0; u.volume=1.0;
-  u.lang = currentLanguage==='hi' ? 'hi-IN' : 'en-IN';
+  u.rate=0.88; u.pitch=1.0; u.volume=1.0;
+  
+  const voices = speechSynthesis.getVoices();
+  let selectedVoice = null;
+  
+  if(currentLanguage === 'hi'){
+    // Hindi ke liye best voice
+    selectedVoice = 
+      voices.find(v => v.name.includes('Swara')) ||           // Microsoft Swara (best Hindi)
+      voices.find(v => v.name.includes('Hemant')) ||          // Microsoft Hemant
+      voices.find(v => v.lang === 'hi-IN') ||
+      voices.find(v => v.lang.startsWith('hi'));
+    u.lang = 'hi-IN';
+  } else {
+    // English ke liye best Indian voice
+    selectedVoice = 
+      voices.find(v => v.name.includes('Heera')) ||           // Microsoft Heera (Indian English Female)
+      voices.find(v => v.name.includes('Ravi')) ||            // Microsoft Ravi (Indian English Male)  
+      voices.find(v => v.name === 'Google US English') ||     // Google Natural
+      voices.find(v => v.name.includes('Aria')) ||            // Microsoft Aria (Natural)
+      voices.find(v => v.name.includes('Jenny')) ||           // Microsoft Jenny
+      voices.find(v => v.name.includes('Zira')) ||            // Microsoft Zira
+      voices.find(v => v.name.includes('David')) ||           // Microsoft David
+      voices.find(v => v.lang === 'en-IN') ||                 // Any Indian English
+      voices.find(v => v.lang === 'en-US');
+    u.lang = selectedVoice?.lang || 'en-IN';
+  }
+  
+  if(selectedVoice) {
+    u.voice = selectedVoice;
+    console.log('[TTS] Using voice:', selectedVoice.name);
+  }
+  
   u.onend = u.onerror = cb || (()=>{});
   speechSynthesis.speak(u);
 }
