@@ -582,64 +582,48 @@ function buildRec(){
   r.maxAlternatives=3;
   r.onstart=()=>{isRec=true;if(!manPause)setState('listening');};
   r.onresult=(e)=>{
-    let interim='',final_quick='';
+    let interim='', final='';
     for(let i=e.resultIndex;i<e.results.length;i++){
       const t=e.results[i][0].transcript;
-      if(e.results[i].isFinal)final_quick+=t;else interim+=t;
+      if(e.results[i].isFinal) final+=t; else interim+=t;
     }
-    const quickCheck=(final_quick||interim).trim().toLowerCase();
+    const heard=(final||interim).trim().toLowerCase();
 
-    // WAKE WORD — "Hey Nexus" se beech mein interrupt kar sakte ho
+    // Wake word interrupt — even during speaking
     if(window._micBlocked || window._nexusSpeaking || curState==='speaking'){
-      if(/hey nexus|nexus stop|nexus ruko|nexus band/i.test(quickCheck)){
-        // Speech stop karo
+      if(/hey nexus|nexus stop|nexus ruko|nexus band/i.test(heard)){
         if(window._currentAudio){window._currentAudio.pause();window._currentAudio=null;}
         if(window.speechSynthesis) window.speechSynthesis.cancel();
-        if(typeof responsiveVoice !== 'undefined') responsiveVoice.cancel();
-        window._nexusSpeaking = false;
-        window._micBlocked = false;
-        setState('listening');
-        rec = buildRec();
-        schedRestart(100);
+        if(typeof responsiveVoice!=='undefined') responsiveVoice.cancel();
+        window._nexusSpeaking=false; window._micBlocked=false;
+        setState('listening'); rec=buildRec(); schedRestart(100);
         respond('Haan bolo, sun raha hoon!');
       }
       return;
     }
     if(curState==='processing') return;
 
-    let interim='',final='';
-    for(let i=e.resultIndex;i<e.results.length;i++){
-      const t=e.results[i][0].transcript;
-      if(e.results[i].isFinal)final+=t;else interim+=t;
-    }
     const d=final||interim;
     if(d){txEl.textContent=d;txEl.classList.remove('empty');}
     if(final.trim()){
       const cmd=final.trim().toLowerCase();
-
-      // Self-echo check — last spoken text se compare
+      // Self-echo check
       if(window._lastSpokenText){
-        const spoken = window._lastSpokenText.toLowerCase();
-        const cmdWords = cmd.replace(/[^a-z0-9 ]/g,'').split(' ').filter(w=>w.length>3);
-        const spokenClean = spoken.replace(/[^a-z0-9 ]/g,'');
-        const matchCount = cmdWords.filter(w=>spokenClean.includes(w)).length;
-        if(cmdWords.length > 2 && matchCount/cmdWords.length > 0.25){
-          console.log('[MIC] Self-echo blocked:', cmd.substring(0,40));
+        const spoken=window._lastSpokenText.toLowerCase();
+        const cmdWords=cmd.replace(/[^a-z0-9 ]/g,'').split(' ').filter(w=>w.length>3);
+        const spokenClean=spoken.replace(/[^a-z0-9 ]/g,'');
+        const matchCount=cmdWords.filter(w=>spokenClean.includes(w)).length;
+        if(cmdWords.length>2 && matchCount/cmdWords.length>0.25){
+          console.log('[MIC] Self-echo blocked:', cmd.substring(0,30));
           return;
         }
       }
-
-      // Too short commands ignore (noise)
-      if(cmd.length < 3) return;
-
-      if(manPause){
-        if(/hey nexus|nexus wake|wake up/.test(cmd)){manPause=false;schedRestart(200);}
-        return;
-      }
+      if(cmd.length<3) return;
+      if(manPause){if(/hey nexus|nexus wake|wake up/.test(cmd)){manPause=false;schedRestart(200);}return;}
       setState('processing');
       setTimeout(()=>processCommand(cmd),200);
     }
-  };
+  }
   r.onerror=(e)=>{
     isRec=false;
     if(e.error==='not-allowed'){setState('error');respEl.textContent='Microphone blocked. Please allow microphone in browser settings.';return;}
@@ -2076,3 +2060,6 @@ setState('idle');stxtEl.textContent='Tap the orb to start';
 </script>
 </body>
 </html>
+
+
+
