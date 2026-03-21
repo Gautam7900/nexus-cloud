@@ -617,6 +617,26 @@ function startWakeListener(){
   } catch(e){ console.log('[WAKE] Error:', e); }
 }
 
+// Echo cancellation mic setup
+async function setupEchoCancelMic(){
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        echoCancellation: true,   // Speaker ki awaaz filter
+        noiseSuppression: true,   // Background noise filter
+        autoGainControl: true,    // Volume auto adjust
+        sampleRate: 16000
+      }
+    });
+    window._micStream = stream;
+    console.log('[MIC] Echo cancellation enabled!');
+    return stream;
+  } catch(e) {
+    console.log('[MIC] Echo cancel setup failed:', e);
+    return null;
+  }
+}
+
 function buildRec(){
   if(!SR)return null;
   const r=new SR();
@@ -751,11 +771,14 @@ async function speak(text, cb){
     // Stop wake listener
     try{ if(_wakeRec){ _wakeRec.abort(); _wakeRec=null; }}catch(e){}
     if(!manPause && window._speakerOn){
+      // Audio fade hone ka wait - speaker distance se adjust
+      const speakLen = text ? text.length : 100;
+      const waitMs = Math.min(Math.max(speakLen * 15, 2000), 5000);
       setTimeout(()=>{
         window._micBlocked = false;
         rec = buildRec();
         schedRestart(200);
-      }, 2000);
+      }, waitMs);
     } else {
       window._micBlocked = false;
       if(!manPause){
@@ -972,12 +995,15 @@ function ytPlayBtn(songName, btn) {
 // ═══ TEXT INPUT HANDLER ═════════════════════════════════════
 // Speaker toggle
 window._speakerOn = true;
+window._aiModeOn = false; // Voice se AI questions disabled by default
 // Push-to-Talk
 let _pttActive = false;
 function pttStart(e){
   if(e) e.preventDefault();
   if(_pttActive) return;
   _pttActive = true;
+  // AI mode ON — PTT se question pooch sakte ho
+  window._aiModeOn = true;
   // Stop current speech
   if(window._currentAudio){window._currentAudio.pause();window._currentAudio=null;}
   if(window.speechSynthesis) window.speechSynthesis.cancel();
@@ -989,17 +1015,19 @@ function pttStart(e){
   try{ rec.start(); }catch(ex){}
   setState('listening');
   const btn = document.getElementById('ptt-btn');
-  if(btn){ btn.classList.add('active'); btn.textContent = '🔴'; }
+  if(btn){ btn.classList.add('active'); btn.textContent = '🔴'; btn.title='AI mode ON — bolo!';}
+  // Visual indicator
+  addChatBubble('🤖 AI mode ON — bolo apna sawaal!', false, '🤖 AI mode ON — bolo apna sawaal!');
 }
 
 function pttStop(e){
   if(e) e.preventDefault();
   if(!_pttActive) return;
   _pttActive = false;
-  // Stop mic
-  try{ if(rec){ rec.stop(); }}catch(ex){}
   const btn = document.getElementById('ptt-btn');
-  if(btn){ btn.classList.remove('active'); btn.textContent = '🎙️'; }
+  if(btn){ btn.classList.remove('active'); btn.textContent = '🎙️'; btn.title='Hold for AI question'; }
+  // AI mode off after 10s (to process answer)
+  setTimeout(()=>{ window._aiModeOn = false; }, 10000);
 }
 
 function toggleSpeaker(){
@@ -1065,6 +1093,8 @@ async function sendTextInput(){
   const question = input.value.trim();
   if(!question) return;
 
+  // Text input — AI mode always on
+  window._aiModeOn = true;
   // Stop current speech immediately
   if(window._currentAudio){ window._currentAudio.pause(); window._currentAudio=null; }
   if(window.speechSynthesis) window.speechSynthesis.cancel();
@@ -1421,9 +1451,16 @@ async function processCommand(cmd){
     return;
   }
 
-  // ── ASK CLAUDE AI ─────────────────────────────────────────
+  // ── ASK CLAUDE AI — VOICE SE DISABLED ────────────────────
+  // Voice se sirf laptop commands. Questions ke liye PTT ya text use karo.
   if(/^(ask|question|claude|explain|what is|what are|who is|who are|how to|how does|why is|why does|difference between|define|kya hai|kya hota|kaun hai|batao|samjhao)/i.test(cmd)){
-    await askClaude(cmd);
+    if(window._aiModeOn){
+      try{if(rec){rec.abort();rec.stop();}}catch(e){}
+      rec=null; isRec=false;
+      await askClaude(cmd);
+    } else {
+      addChatBubble('AI mode off hai. 🎙️ PTT button dabao ya text mein likhke poochho!', false, 'AI mode off hai. 🎙️ PTT button dabao ya text mein likhke poochho!');
+    }
     return;
   }
 
@@ -1627,8 +1664,16 @@ async function aiAssistance(input){
     const f='<div style="margin-top:10px;font-size:.75rem"><div style="padding:4px 0"><span style="color:var(--cyan)">▸</span> Open apps, files & folders</div><div style="padding:4px 0"><span style="color:var(--green)">▸</span> Control volume & brightness</div><div style="padding:4px 0"><span style="color:var(--amber)">▸</span> Search web & open websites</div><div style="padding:4px 0"><span style="color:var(--purple)">▸</span> Set timers & check battery</div><div style="padding:4px 0"><span style="color:var(--cyan)">▸</span> Keyboard shortcuts (copy, paste, save)</div><div style="padding:4px 0"><span style="color:var(--green)">▸</span> Play music on YouTube instantly</div><div style="padding:4px 0"><span style="color:var(--amber)">▸</span> Save & read notes</div></div>';
     return respond('Here are my main capabilities:',f);
   }
-  // Unknown command - Claude AI se poochho
-  await askClaude(input);
+  // Unknown command
+  if(window._aiModeOn){
+    // AI mode on — question poochho
+    try{if(rec){rec.abort();rec.stop();}}catch(e){}
+    rec=null; isRec=false;
+    await askClaude(input);
+  } else {
+    // AI mode off — sirf commands
+    respond(`"${input}" — command nahi mili. Laptop commands bolo ya AI ke liye 🎙️ PTT dabao.`);
+  }
 }
 
 async function askClaude(question) {
@@ -2092,6 +2137,8 @@ async function sendEmailNow(to, subject, body){
 function manualToggle(){
   if(!started){
     started=true;unlockSpeech();manPause=false;
+    // Echo cancellation setup
+    setupEchoCancelMic();
     rec=buildRec();
     if(!rec){respEl.textContent='⚠ Speech API not supported. Use Google Chrome or Microsoft Edge.';setState('error');return;}
     setTimeout(()=>{setState('listening');startRec();setTimeout(()=>respond('Nexus online. Full laptop voice control is active. What would you like me to open or play?'),600);},300);
