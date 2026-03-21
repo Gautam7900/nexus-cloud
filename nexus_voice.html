@@ -594,7 +594,7 @@ function buildRec(){
         const cmdWords = cmd.replace(/[^a-z0-9 ]/g,'').split(' ').filter(w=>w.length>3);
         const spokenClean = spoken.replace(/[^a-z0-9 ]/g,'');
         const matchCount = cmdWords.filter(w=>spokenClean.includes(w)).length;
-        if(cmdWords.length > 0 && matchCount/cmdWords.length > 0.35){
+        if(cmdWords.length > 2 && matchCount/cmdWords.length > 0.25){
           console.log('[MIC] Self-echo blocked:', cmd.substring(0,40));
           return;
         }
@@ -661,7 +661,14 @@ document.getElementById('lang-hi').classList.toggle('active',currentLanguage==='
 async function speak(text, cb){
   // Agar speaker off hai toh skip karo
   if(!window._speakerOn){ if(cb)cb(); return; }
-  // Mic poora destroy karo
+  // Stop current audio if playing
+  if(window._currentAudio){
+    window._currentAudio.pause();
+    window._currentAudio = null;
+  }
+  if(window.speechSynthesis) window.speechSynthesis.cancel();
+  if(typeof responsiveVoice !== 'undefined') responsiveVoice.cancel();
+  // Mic completely destroy karo — jab tak bolein tab tak off
   try{if(rec){rec.abort();rec.stop();}}catch(e){}
   rec = null; isRec = false;
   clearTimeout(restTO);
@@ -681,15 +688,21 @@ async function speak(text, cb){
     if(cb) cb();
     setState('idle');
     window._nexusSpeaking = false;
-    if(!manPause){
+    window._lastSpokenText = '';
+    if(!manPause && window._speakerOn){
+      // Speaker on tha — 3s baad mic on karo
       setTimeout(()=>{
         window._micBlocked = false;
-        window._lastSpokenText = '';
         rec = buildRec();
         schedRestart(200);
-      }, 4000); // 4 sec buffer — apni awaaz detect na ho
+      }, 3000);
     } else {
+      // Speaker off tha ya paused — turant mic on
       window._micBlocked = false;
+      if(!manPause){
+        rec = buildRec();
+        schedRestart(200);
+      }
     }
   }
 
@@ -909,10 +922,23 @@ function toggleSpeaker(){
     btn.style.borderColor = 'rgba(0,255,157,0.3)';
     btn.style.color = '#00ff9d';
   } else {
+    // Voice band karo — turant stop
     btn.textContent = '🔇';
     btn.style.background = 'rgba(255,45,107,0.1)';
     btn.style.borderColor = 'rgba(255,45,107,0.3)';
     btn.style.color = '#ff2d6b';
+    // Current speech stop
+    if(window._currentAudio){ window._currentAudio.pause(); window._currentAudio=null; }
+    if(window.speechSynthesis) window.speechSynthesis.cancel();
+    if(typeof responsiveVoice !== 'undefined') responsiveVoice.cancel();
+    // Mic immediately on for next command
+    window._nexusSpeaking = false;
+    window._micBlocked = false;
+    setState('idle');
+    if(!manPause){
+      rec = buildRec();
+      schedRestart(200);
+    }
   }
 }
 
@@ -1511,6 +1537,11 @@ async function aiAssistance(input){
 }
 
 async function askClaude(question) {
+  // Stop any current speech
+  if(window._currentAudio){ window._currentAudio.pause(); window._currentAudio=null; }
+  if(window.speechSynthesis) window.speechSynthesis.cancel();
+  if(typeof responsiveVoice !== 'undefined') responsiveVoice.cancel();
+  window._nexusSpeaking = false;
   // Clear previous
   outxEl.innerHTML = '';
   const aiBox = document.getElementById('ai-output-box');
@@ -1520,7 +1551,7 @@ async function askClaude(question) {
     // AI answer + images parallel fetch
     const [aiRes, imgRes] = await Promise.all([
       execCmd('ask_claude', {question: question}),
-      execCmd('search_images', {query: question}).catch(()=>null)
+      execCmd('search_images', {query: question.split(' ').slice(0,4).join(' ')}).catch(()=>null)
     ]);
     let data; try{ data = JSON.parse(aiRes.message); }catch(e){ data = aiRes; }
     const answer = data.answer || data.message || 'Jawab nahi mila.';
