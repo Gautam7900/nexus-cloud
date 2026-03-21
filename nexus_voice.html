@@ -62,6 +62,8 @@ body{background:var(--bg);color:var(--text);font-family:'Share Tech Mono',monosp
 .chat-msg-nexus{background:rgba(0,229,255,0.06);border:1px solid rgba(0,229,255,0.15);color:var(--text);border-top-left-radius:4px;}
 .chat-msg-user{background:rgba(0,255,157,0.08);border:1px solid rgba(0,255,157,0.15);color:var(--text);border-top-right-radius:4px;}
 .chat-history{padding:14px 16px;max-height:350px;overflow-y:auto;display:flex;flex-direction:column;}
+.ptt-btn{width:44px;height:44px;border-radius:50%;background:rgba(0,229,255,0.1);border:2px solid rgba(0,229,255,0.4);color:var(--cyan);font-size:1.1rem;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;flex-shrink:0;user-select:none;}
+.ptt-btn.active{background:rgba(255,45,107,0.25);border-color:#ff2d6b;color:#ff2d6b;transform:scale(1.1);}
 .user-input-box{display:flex;gap:8px;margin-top:12px;width:100%;}
 .user-input-box input{flex:1;background:var(--panel2);border:1px solid rgba(0,229,255,0.25);border-radius:8px;padding:10px 14px;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:0.82rem;outline:none;transition:border .2s;}
 .user-input-box input:focus{border-color:var(--cyan);box-shadow:0 0 8px rgba(0,229,255,0.2);}
@@ -259,6 +261,13 @@ textarea.wa-input{resize:vertical;min-height:80px;line-height:1.6;}
           style="flex:1;background:rgba(0,229,255,0.04);border:1px solid rgba(0,229,255,0.15);border-radius:10px;padding:10px 14px;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:0.82rem;outline:none;transition:border .2s;"
           onfocus="this.style.borderColor='var(--cyan)'"
           onblur="this.style.borderColor='rgba(0,229,255,0.15)'"/>
+        <!-- Push-to-Talk Button -->
+        <button id="ptt-btn" class="ptt-btn" 
+          title="Hold to speak"
+          onmousedown="pttStart()" onmouseup="pttStop()" onmouseleave="pttStop()"
+          ontouchstart="pttStart(event)" ontouchend="pttStop(event)">
+          🎙️
+        </button>
         <!-- Speaker Toggle Button -->
         <button id="speaker-btn" onclick="toggleSpeaker()" title="Voice on/off"
           style="width:36px;height:36px;border-radius:50%;background:rgba(0,255,157,0.1);border:1px solid rgba(0,255,157,0.3);color:#00ff9d;font-size:1rem;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
@@ -573,10 +582,30 @@ function buildRec(){
   r.maxAlternatives=3;
   r.onstart=()=>{isRec=true;if(!manPause)setState('listening');};
   r.onresult=(e)=>{
-    // STRICT: Agar speaking/processing state hai — absolutely ignore
-    if(curState==='speaking' || curState==='processing') return;
-    if(window._nexusSpeaking) return;
-    if(window._micBlocked) return;
+    let interim='',final_quick='';
+    for(let i=e.resultIndex;i<e.results.length;i++){
+      const t=e.results[i][0].transcript;
+      if(e.results[i].isFinal)final_quick+=t;else interim+=t;
+    }
+    const quickCheck=(final_quick||interim).trim().toLowerCase();
+
+    // WAKE WORD — "Hey Nexus" se beech mein interrupt kar sakte ho
+    if(window._micBlocked || window._nexusSpeaking || curState==='speaking'){
+      if(/hey nexus|nexus stop|nexus ruko|nexus band/i.test(quickCheck)){
+        // Speech stop karo
+        if(window._currentAudio){window._currentAudio.pause();window._currentAudio=null;}
+        if(window.speechSynthesis) window.speechSynthesis.cancel();
+        if(typeof responsiveVoice !== 'undefined') responsiveVoice.cancel();
+        window._nexusSpeaking = false;
+        window._micBlocked = false;
+        setState('listening');
+        rec = buildRec();
+        schedRestart(100);
+        respond('Haan bolo, sun raha hoon!');
+      }
+      return;
+    }
+    if(curState==='processing') return;
 
     let interim='',final='';
     for(let i=e.resultIndex;i<e.results.length;i++){
@@ -913,6 +942,36 @@ function ytPlayBtn(songName, btn) {
 // ═══ TEXT INPUT HANDLER ═════════════════════════════════════
 // Speaker toggle
 window._speakerOn = true;
+// Push-to-Talk
+let _pttActive = false;
+function pttStart(e){
+  if(e) e.preventDefault();
+  if(_pttActive) return;
+  _pttActive = true;
+  // Stop current speech
+  if(window._currentAudio){window._currentAudio.pause();window._currentAudio=null;}
+  if(window.speechSynthesis) window.speechSynthesis.cancel();
+  if(typeof responsiveVoice !== 'undefined') responsiveVoice.cancel();
+  window._nexusSpeaking = false;
+  window._micBlocked = false;
+  // Start mic
+  if(!rec) rec = buildRec();
+  try{ rec.start(); }catch(ex){}
+  setState('listening');
+  const btn = document.getElementById('ptt-btn');
+  if(btn){ btn.classList.add('active'); btn.textContent = '🔴'; }
+}
+
+function pttStop(e){
+  if(e) e.preventDefault();
+  if(!_pttActive) return;
+  _pttActive = false;
+  // Stop mic
+  try{ if(rec){ rec.stop(); }}catch(ex){}
+  const btn = document.getElementById('ptt-btn');
+  if(btn){ btn.classList.remove('active'); btn.textContent = '🎙️'; }
+}
+
 function toggleSpeaker(){
   window._speakerOn = !window._speakerOn;
   const btn = document.getElementById('speaker-btn');
@@ -975,6 +1034,12 @@ async function sendTextInput(){
   const input = document.getElementById('user-text-input');
   const question = input.value.trim();
   if(!question) return;
+
+  // Stop current speech immediately
+  if(window._currentAudio){ window._currentAudio.pause(); window._currentAudio=null; }
+  if(window.speechSynthesis) window.speechSynthesis.cancel();
+  if(typeof responsiveVoice !== 'undefined') responsiveVoice.cancel();
+  window._nexusSpeaking = false;
 
   txEl.textContent = question;
   txEl.classList.remove('empty');
