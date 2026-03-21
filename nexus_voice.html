@@ -573,6 +573,50 @@ function setState(s){
 const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
 let rec=null;
 
+// Always-on wake word listener — sirf "Hey Nexus" ke liye
+let _wakeRec = null;
+function startWakeListener(){
+  if(!SR) return;
+  try{
+    if(_wakeRec){ try{_wakeRec.abort();}catch(e){} }
+    _wakeRec = new SR();
+    _wakeRec.continuous = true;
+    _wakeRec.interimResults = true;
+    _wakeRec.lang = 'en-IN';
+    _wakeRec.onresult = (e)=>{
+      // Sirf jab Nexus bol raha ho
+      if(!window._nexusSpeaking && !window._micBlocked) return;
+      let heard = '';
+      for(let i=e.resultIndex;i<e.results.length;i++){
+        heard += e.results[i][0].transcript;
+      }
+      heard = heard.trim().toLowerCase();
+      if(/hey nexus|nexus stop|nexus ruko|bas|stop|ruko/i.test(heard)){
+        console.log('[WAKE] Interrupt detected:', heard);
+        // Stop speech
+        if(window._currentAudio){window._currentAudio.pause();window._currentAudio=null;}
+        if(window.speechSynthesis) window.speechSynthesis.cancel();
+        if(typeof responsiveVoice!=='undefined') responsiveVoice.cancel();
+        window._nexusSpeaking = false;
+        window._micBlocked = false;
+        setState('listening');
+        if(!rec) rec = buildRec();
+        schedRestart(200);
+        addChatBubble('Haan bolo! 👂', false, 'Haan bolo! 👂');
+      }
+    };
+    _wakeRec.onerror = ()=>{};
+    _wakeRec.onend = ()=>{
+      // Restart wake listener
+      if(window._nexusSpeaking || window._micBlocked){
+        setTimeout(startWakeListener, 300);
+      }
+    };
+    _wakeRec.start();
+    console.log('[WAKE] Wake listener started');
+  } catch(e){ console.log('[WAKE] Error:', e); }
+}
+
 function buildRec(){
   if(!SR)return null;
   const r=new SR();
@@ -689,6 +733,8 @@ async function speak(text, cb){
   window._micBlocked = true;
   window._lastSpokenText = text;
   setState('speaking');
+  // Wake word listener start karo
+  setTimeout(startWakeListener, 200);
 
   // ElevenLabs disabled — permission issue
   // Fallback — ResponsiveVoice/Browser
@@ -702,15 +748,15 @@ async function speak(text, cb){
     setState('idle');
     window._nexusSpeaking = false;
     window._lastSpokenText = '';
+    // Stop wake listener
+    try{ if(_wakeRec){ _wakeRec.abort(); _wakeRec=null; }}catch(e){}
     if(!manPause && window._speakerOn){
-      // Speaker on tha — 3s baad mic on karo
       setTimeout(()=>{
         window._micBlocked = false;
         rec = buildRec();
         schedRestart(200);
-      }, 3000);
+      }, 2000);
     } else {
-      // Speaker off tha ya paused — turant mic on
       window._micBlocked = false;
       if(!manPause){
         rec = buildRec();
@@ -2060,6 +2106,3 @@ setState('idle');stxtEl.textContent='Tap the orb to start';
 </script>
 </body>
 </html>
-
-
-
