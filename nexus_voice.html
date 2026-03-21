@@ -1438,16 +1438,168 @@ async function processCommand(cmd){
   if(/\b(clear|reset)\b/.test(cmd)){outxEl.innerHTML='';return respond('Cleared. Ready for next command.');}
 
   // ── GREETINGS — Local handle ──────────────────────────────
+  // ── GREETINGS ──────────────────────────────────────────────
   if(/^(hi|hello|hey|hii|helo|namaste|namaskar)/i.test(cmd) ||
      /(kesi ho|kaisi ho|kaisa ho|kese ho|kya haal|how are you|kya kar rahi|kya karti|kya karta|kaun ho|what do you do|tell me about yourself|apne bare|apna naam)/i.test(cmd)){
     const greetings = [
-      'Main bilkul theek hoon! Aap kaise hain? 😊',
-      'Main badhiya hoon, shukriya! Aap sunao, kya haal hai?',
-      'Haan theek hoon! Bolo, main kya madad kar sakta hoon?',
+      'Main bilkul theek hoon! Aap kaise hain?',
+      'Main badhiya hoon, shukriya! Aap sunao kya haal hai?',
+      'Haan theek hoon! Bolo main kya madad kar sakta hoon?',
       'All good! Aap kaisa feel kar rahe ho aaj?'
     ];
-    const reply = greetings[Math.floor(Math.random()*greetings.length)];
+    respond(greetings[Math.floor(Math.random()*greetings.length)]);
+    return;
+  }
+
+  // ── GOODBYE / BYE ──────────────────────────────────────────
+  if(/(bye|goodbye|good bye|alvida|baad mein|baad me milte|phir milenge|chalte hain|chalta hoon|chalta hun|take care|tc|see you|see ya|tata|tata bye)/i.test(cmd)){
+    const byes = [
+      'Bye bye! Jab zaroorat ho tab bulao.',
+      'Alvida! Apna khayal rakhna.',
+      'Theek hai, baad mein baat karte hain!',
+      'Bye! Take care, main hamesha yahan hoon.'
+    ];
+    respond(byes[Math.floor(Math.random()*byes.length)]);
+    return;
+  }
+
+  // ── GOOD NIGHT ─────────────────────────────────────────────
+  if(/(good night|goodnight|shubh ratri|subh ratri|so jao|so raha hoon|neend aa rahi|raat ko)/i.test(cmd)){
+    const nights = [
+      'Good night! Achhi neend aaye.',
+      'Shubh ratri! Sweet dreams.',
+      'Good night! Kal phir baat karte hain.',
+      'So jao chain se! Main yahan hoon jab chahiye.'
+    ];
+    respond(nights[Math.floor(Math.random()*nights.length)]);
+    return;
+  }
+
+  // ── GOOD MORNING / AFTERNOON ───────────────────────────────
+  if(/(good morning|good afternoon|good evening|subah|shubh prabhat|subh prabhat)/i.test(cmd)){
+    const hour = new Date().getHours();
+    let reply = hour < 12 ? 'Good morning! Aaj ka din accha jaaye.' :
+                hour < 17 ? 'Good afternoon! Kya chal raha hai?' :
+                'Good evening! Kaise raha aaj ka din?';
     respond(reply);
+    return;
+  }
+
+  // ── THANKS ─────────────────────────────────────────────────
+  if(/(thanks|thank you|shukriya|dhanyawad|bahut accha|great|awesome|zabardast|wah|badhiya)/i.test(cmd)){
+    const thanks = [
+      'Koi baat nahi! Aur kuch kaam ho?',
+      'Khushi hui madad karke!',
+      'Bilkul! Jab chahiye bulao.',
+      'Shukriya aapka! Aur kya chahiye?'
+    ];
+    respond(thanks[Math.floor(Math.random()*thanks.length)]);
+    return;
+  }
+
+  // ── SORRY / MAAFI ──────────────────────────────────────────
+  if(/(sorry|maafi|galti|maaf karo|maaf karna|my bad)/i.test(cmd)){
+    const sorries = [
+      'Koi baat nahi! Main samajhta hoon.',
+      'Chodo yaar, sab theek hai!',
+      'No worries! Aage kya karna hai?'
+    ];
+    respond(sorries[Math.floor(Math.random()*sorries.length)]);
+    return;
+  }
+
+  // ── BORED / MOOD ───────────────────────────────────────────
+  if(/(bored|bore ho raha|kuch nahi karna|pagal ho raha|thak gaya|thak gayi|neend aa rahi|neend|sar dard|bhook lagi|pyaas lagi)/i.test(cmd)){
+    const mood = [
+      'Ek kaam karo — koi achhi movie dekho ya music suno!',
+      'Thoda break lo, chai piyo!',
+      'Boredom ka ilaaj — kuch naya seekho aaj!',
+      'Chill karo! Main hoon na.',
+      'Thak gaye? So jao thoda!'
+    ];
+    respond(mood[Math.floor(Math.random()*mood.length)]);
+    return;
+  }
+
+  // ── JOKES ──────────────────────────────────────────────────
+  if(/(joke|jokes|hasao|funny|kuch funny|laugh|haso)/i.test(cmd)){
+    const jokes = [
+      'Ek banda doctor ke paas gaya. Doctor ne kaha — roz seb khao. Banda bola — par main fruit shop chalata hoon, toh kya roz mujhe hi khana padega?',
+      'Teacher ne pucha — paani ka formula batao. Student ne kaha — H I J K L M N O. Teacher — yeh kya hai? Student — H2O!',
+      'Wifi ka password kya hai? Ghar wale bole — Ghar ke kaam karo pehle!',
+      'Main itna smart hoon ki main kabhi galat nahi hota. Ek baar galat tha — tab mujhe laga main galat hoon. Woh bhi galat nikla!'
+    ];
+    respond(jokes[Math.floor(Math.random()*jokes.length)]);
+    return;
+  }
+
+  // ── HOW IS WORK / STUDIES ──────────────────────────────────
+  if(/(kaam kaisa|studies kaisi|padhai|kaam chal raha|business|paisa|salary|job)/i.test(cmd)){
+    const work = [
+      'Kaam dhyan se karo — mehnat ka fal zaroor milta hai!',
+      'Consistency hi success ki chaabi hai!',
+      'Ek ek step le lo — manzil zaroor milegi.',
+      'Hard work beats talent when talent doesn't work hard!'
+    ];
+    respond(work[Math.floor(Math.random()*work.length)]);
+    return;
+  }
+
+  // ── LOVE / DOST ────────────────────────────────────────────
+  if(/(i love you|love you|pyaar|mohabbat|dost|yaar|bhai|bro|sis|didi|bhaiya)/i.test(cmd)){
+    const love = [
+      'Aww! Main bhi aapka fan hoon!',
+      'Yaar, tum bahut acche ho!',
+      'Haha! Thanks, tum bhi zabardast ho!',
+      'Main hamesha aapke saath hoon!'
+    ];
+    respond(love[Math.floor(Math.random()*love.length)]);
+    return;
+  }
+
+  // ── MOTIVATE ME ────────────────────────────────────────────
+  if(/(motivate|motivation|inspire|himmat|hausla|dar lag raha|darr|nervous|tension|stress|worry|chinta)/i.test(cmd)){
+    const motivate = [
+      'Tum kar sakte ho! Bas shuru karo.',
+      'Har mushkil ek naya mauka hai seekhne ka!',
+      'Dar ke aage jeet hai!',
+      'Jo log girte hain aur uthte hain — wohi log jeette hain!',
+      'Ek din mein duniya nahi badlti, lekin ek step se safar shuru hota hai!'
+    ];
+    respond(motivate[Math.floor(Math.random()*motivate.length)]);
+    return;
+  }
+
+  // ── WEATHER SMALL TALK ─────────────────────────────────────
+  if(/(aaj mausam|garmi|garmi lag rahi|sardi|thand|barish|baarish ho rahi|dhoop)/i.test(cmd)){
+    const weather = [
+      'Haan yaar, mausam ka kya bharosa!',
+      'AC chala do — problem solved!',
+      'Barish mein chai aur pakode — perfect combo!',
+      'Sardi mein razai — best feeling ever!'
+    ];
+    respond(weather[Math.floor(Math.random()*weather.length)]);
+    return;
+  }
+
+  // ── WHAT TIME / DATE ───────────────────────────────────────
+  if(/(time kya hua|time batao|kitne baje|kya time hai|aaj kaunsa din|date kya hai|aaj ki date)/i.test(cmd)){
+    const now = new Date();
+    const time = now.toLocaleTimeString('hi-IN', {hour:'2-digit', minute:'2-digit'});
+    const date = now.toLocaleDateString('hi-IN', {weekday:'long', day:'numeric', month:'long'});
+    respond(`Abhi time hai ${time}, aur aaj ${date} hai.`);
+    return;
+  }
+
+  // ── COMPLIMENT NEXUS ───────────────────────────────────────
+  if(/(tum acche ho|tum best ho|you are great|you are amazing|nexus best|nexus rocks|mujhe pasand ho)/i.test(cmd)){
+    const compliments = [
+      'Haha! Shukriya, aap bhi toh bahut acche hain!',
+      'Aww thanks! Aap din bana diya mera!',
+      'Main try karta hoon! Aapka support milta rahe!',
+      'Thanks yaar! Kya karein, genius jo hoon!'
+    ];
+    respond(compliments[Math.floor(Math.random()*compliments.length)]);
     return;
   }
 
