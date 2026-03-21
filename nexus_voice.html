@@ -1439,7 +1439,7 @@ async function processCommand(cmd){
 
   // ── GREETINGS — Local handle ──────────────────────────────
   // ── GREETINGS ──────────────────────────────────────────────
-  if(/^(hi|hello|hey|hii|helo|namaste|namaskar)/i.test(cmd) ||
+  if(/^(hi|hello|hey|hii|helo|namaste|namaskar)/i.test(cmd) ||
      /(kesi ho|kaisi ho|kaisa ho|kese ho|kya haal|how are you|kya kar rahi|kya karti|kya karta|kaun ho|what do you do|tell me about yourself|apne bare|apna naam)/i.test(cmd)){
     const greetings = [
       'Main bilkul theek hoon! Aap kaise hain?',
@@ -1452,7 +1452,7 @@ async function processCommand(cmd){
   }
 
   // ── GOODBYE / BYE ──────────────────────────────────────────
-  if(/(bye|goodbye|good bye|alvida|baad mein|baad me milte|phir milenge|chalte hain|chalta hoon|chalta hun|take care|tc|see you|see ya|tata|tata bye)/i.test(cmd)){
+  if(/(bye|goodbye|good bye|alvida|baad mein|baad me milte|phir milenge|chalte hain|chalta hoon|chalta hun|take care|tc|see you|see ya|tata|tata bye)/i.test(cmd)){
     const byes = [
       'Bye bye! Jab zaroorat ho tab bulao.',
       'Alvida! Apna khayal rakhna.',
@@ -1464,7 +1464,7 @@ async function processCommand(cmd){
   }
 
   // ── GOOD NIGHT ─────────────────────────────────────────────
-  if(/(good night|goodnight|shubh ratri|subh ratri|so jao|so raha hoon|neend aa rahi|raat ko)/i.test(cmd)){
+  if(/(good night|goodnight|shubh ratri|subh ratri|so jao|so raha hoon|neend aa rahi|raat ko)/i.test(cmd)){
     const nights = [
       'Good night! Achhi neend aaye.',
       'Shubh ratri! Sweet dreams.',
@@ -1476,7 +1476,7 @@ async function processCommand(cmd){
   }
 
   // ── GOOD MORNING / AFTERNOON ───────────────────────────────
-  if(/(good morning|good afternoon|good evening|subah|shubh prabhat|subh prabhat)/i.test(cmd)){
+  if(/(good morning|good afternoon|good evening|subah|shubh prabhat|subh prabhat)/i.test(cmd)){
     const hour = new Date().getHours();
     let reply = hour < 12 ? 'Good morning! Aaj ka din accha jaaye.' :
                 hour < 17 ? 'Good afternoon! Kya chal raha hai?' :
@@ -1486,7 +1486,7 @@ async function processCommand(cmd){
   }
 
   // ── THANKS ─────────────────────────────────────────────────
-  if(/(thanks|thank you|shukriya|dhanyawad|bahut accha|great|awesome|zabardast|wah|badhiya)/i.test(cmd)){
+  if(/(thanks|thank you|shukriya|dhanyawad|bahut accha|great|awesome|zabardast|wah|badhiya)/i.test(cmd)){
     const thanks = [
       'Koi baat nahi! Aur kuch kaam ho?',
       'Khushi hui madad karke!',
@@ -1498,7 +1498,7 @@ async function processCommand(cmd){
   }
 
   // ── SORRY / MAAFI ──────────────────────────────────────────
-  if(/(sorry|maafi|galti|maaf karo|maaf karna|my bad)/i.test(cmd)){
+  if(/(sorry|maafi|galti|maaf karo|maaf karna|my bad)/i.test(cmd)){
     const sorries = [
       'Koi baat nahi! Main samajhta hoon.',
       'Chodo yaar, sab theek hai!',
@@ -1509,7 +1509,7 @@ async function processCommand(cmd){
   }
 
   // ── BORED / MOOD ───────────────────────────────────────────
-  if(/(bored|bore ho raha|kuch nahi karna|pagal ho raha|thak gaya|thak gayi|neend aa rahi|neend|sar dard|bhook lagi|pyaas lagi)/i.test(cmd)){
+  if(/(bored|bore ho raha|kuch nahi karna|pagal ho raha|thak gaya|thak gayi|neend aa rahi|neend|sar dard|bhook lagi|pyaas lagi)/i.test(cmd)){
     const mood = [
       'Ek kaam karo — koi achhi movie dekho ya music suno!',
       'Thoda break lo, chai piyo!',
@@ -1522,7 +1522,7 @@ async function processCommand(cmd){
   }
 
   // ── JOKES ──────────────────────────────────────────────────
-  if(/(joke|jokes|hasao|funny|kuch funny|laugh|haso)/i.test(cmd)){
+  if(/(joke|jokes|hasao|funny|kuch funny|laugh|haso)/i.test(cmd)){
     const jokes = [
       'Ek banda doctor ke paas gaya. Doctor ne kaha — roz seb khao. Banda bola — par main fruit shop chalata hoon, toh kya roz mujhe hi khana padega?',
       'Teacher ne pucha — paani ka formula batao. Student ne kaha — H I J K L M N O. Teacher — yeh kya hai? Student — H2O!',
@@ -1534,19 +1534,19 @@ async function processCommand(cmd){
   }
 
   // ── HOW IS WORK / STUDIES ──────────────────────────────────
-  if(/(kaam kaisa|studies kaisi|padhai|kaam chal raha|business|paisa|salary|job)/i.test(cmd)){
+  if(/(kaam kaisa|studies kaisi|padhai|kaam chal raha|business|paisa|salary|job)/i.test(cmd)){
     const work = [
       'Kaam dhyan se karo — mehnat ka fal zaroor milta hai!',
       'Consistency hi success ki chaabi hai!',
       'Ek ek step le lo — manzil zaroor milegi.',
-      'Hard work beats talent when talent doesn't work hard!'
+      'Hard work beats talent when talent does not work hard!'
     ];
     respond(work[Math.floor(Math.random()*work.length)]);
     return;
   }
 
   // ── LOVE / DOST ────────────────────────────────────────────
-  if(/(i love you|love you|pyaar|mohabbat|dost|yaar|bhai|bro|sis|didi|bhaiya)/i.test(cmd)){
+  if(/(i love you|love you|pyaar|mohabbat|dost|yaar|bhai|bro|sis|didi|bhaiya)/i.test(cmd)){
     const love = [
       'Aww! Main bhi aapka fan hoon!',
       'Yaar, tum bahut acche ho!',
@@ -1558,7 +1558,7 @@ async function processCommand(cmd){
   }
 
   // ── MOTIVATE ME ────────────────────────────────────────────
-  if(/(motivate|motivation|inspire|himmat|hausla|dar lag raha|darr|nervous|tension|stress|worry|chinta)/i.test(cmd)){
+  if(/(motivate|motivation|inspire|himmat|hausla|dar lag raha|darr|nervous|tension|stress|worry|chinta)/i.test(cmd)){
     const motivate = [
       'Tum kar sakte ho! Bas shuru karo.',
       'Har mushkil ek naya mauka hai seekhne ka!',
@@ -1571,7 +1571,7 @@ async function processCommand(cmd){
   }
 
   // ── WEATHER SMALL TALK ─────────────────────────────────────
-  if(/(aaj mausam|garmi|garmi lag rahi|sardi|thand|barish|baarish ho rahi|dhoop)/i.test(cmd)){
+  if(/(aaj mausam|garmi|garmi lag rahi|sardi|thand|barish|baarish ho rahi|dhoop)/i.test(cmd)){
     const weather = [
       'Haan yaar, mausam ka kya bharosa!',
       'AC chala do — problem solved!',
@@ -1583,7 +1583,7 @@ async function processCommand(cmd){
   }
 
   // ── WHAT TIME / DATE ───────────────────────────────────────
-  if(/(time kya hua|time batao|kitne baje|kya time hai|aaj kaunsa din|date kya hai|aaj ki date)/i.test(cmd)){
+  if(/(time kya hua|time batao|kitne baje|kya time hai|aaj kaunsa din|date kya hai|aaj ki date)/i.test(cmd)){
     const now = new Date();
     const time = now.toLocaleTimeString('hi-IN', {hour:'2-digit', minute:'2-digit'});
     const date = now.toLocaleDateString('hi-IN', {weekday:'long', day:'numeric', month:'long'});
@@ -1592,7 +1592,7 @@ async function processCommand(cmd){
   }
 
   // ── COMPLIMENT NEXUS ───────────────────────────────────────
-  if(/(tum acche ho|tum best ho|you are great|you are amazing|nexus best|nexus rocks|mujhe pasand ho)/i.test(cmd)){
+  if(/(tum acche ho|tum best ho|you are great|you are amazing|nexus best|nexus rocks|mujhe pasand ho)/i.test(cmd)){
     const compliments = [
       'Haha! Shukriya, aap bhi toh bahut acche hain!',
       'Aww thanks! Aap din bana diya mera!',
