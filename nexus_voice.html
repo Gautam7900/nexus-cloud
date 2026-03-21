@@ -1517,12 +1517,33 @@ async function askClaude(question) {
   if(aiBox) aiBox.style.display = 'none';
   respEl.textContent = '⏳ Pooch raha hoon...';
   try {
-    const res = await execCmd('ask_claude', {question: question});
-    let data; try{ data = JSON.parse(res.message); }catch(e){ data = res; }
+    // AI answer + images parallel fetch
+    const [aiRes, imgRes] = await Promise.all([
+      execCmd('ask_claude', {question: question}),
+      execCmd('search_images', {query: question}).catch(()=>null)
+    ]);
+    let data; try{ data = JSON.parse(aiRes.message); }catch(e){ data = aiRes; }
     const answer = data.answer || data.message || 'Jawab nahi mila.';
     const formatted = formatAIAnswer(answer);
-    showAnswer(question, answer, formatted);
-    speak(answer);
+
+    // Images
+    let imgHtml = '';
+    if(imgRes){
+      let imgData; try{ imgData = JSON.parse(imgRes.message); }catch(e){ imgData = imgRes; }
+      if(imgData.ok && imgData.images && imgData.images.length > 0){
+        imgHtml = `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
+          ${imgData.images.map(img=>`
+            <div style="border-radius:8px;overflow:hidden;border:1px solid rgba(0,229,255,0.2);">
+              <img src="${img.url}" alt="${img.title}" 
+                style="width:140px;height:90px;object-fit:cover;display:block;"
+                onerror="this.parentElement.style.display='none'"/>
+            </div>`).join('')}
+        </div>`;
+      }
+    }
+
+    showAnswer(question, answer, formatted + imgHtml);
+    if(window._speakerOn) speak(answer);
   } catch(e) {
     respond('AI se connect nahi ho saka.');
   }
