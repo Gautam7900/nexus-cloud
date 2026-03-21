@@ -48,10 +48,20 @@ body{background:var(--bg);color:var(--text);font-family:'Share Tech Mono',monosp
 .tx-lbl{font-size:0.56rem;letter-spacing:0.22em;color:var(--muted);text-transform:uppercase;margin-bottom:5px;text-align:center;}
 .tx-txt{font-size:1rem;color:var(--cyan);min-height:26px;word-wrap:break-word;line-height:1.5;padding:0 10px;text-align:center;}
 .tx-txt.empty{color:var(--muted);font-size:0.76rem;font-style:italic;}
-.resp-box{width:100%;background:var(--panel);border:1px solid var(--b);border-radius:12px;padding:0;position:relative;overflow:hidden;}
+.resp-box{width:100%;background:var(--panel);border:1px solid var(--b);border-radius:16px;padding:0;position:relative;overflow:hidden;}
 .resp-box::before{content:'NEXUS';position:absolute;top:-1px;left:16px;font-size:0.5rem;letter-spacing:0.25em;color:var(--muted);background:var(--panel);padding:0 7px;z-index:1;}
 .resp-txt{color:var(--green);font-size:0.85rem;line-height:1.7;}
 .out-x{margin-top:10px;}
+/* ChatGPT style chat bubbles */
+.chat-bubble-nexus{display:flex;gap:10px;margin-bottom:14px;align-items:flex-start;}
+.chat-bubble-user{display:flex;gap:10px;margin-bottom:14px;align-items:flex-start;flex-direction:row-reverse;}
+.chat-avatar{width:30px;height:30px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:0.65rem;font-weight:bold;}
+.chat-avatar-nexus{background:rgba(0,229,255,0.15);border:1px solid rgba(0,229,255,0.3);color:var(--cyan);}
+.chat-avatar-user{background:rgba(0,255,157,0.15);border:1px solid rgba(0,255,157,0.3);color:var(--green);}
+.chat-msg{max-width:85%;padding:10px 14px;border-radius:14px;font-size:0.82rem;line-height:1.7;}
+.chat-msg-nexus{background:rgba(0,229,255,0.06);border:1px solid rgba(0,229,255,0.15);color:var(--text);border-top-left-radius:4px;}
+.chat-msg-user{background:rgba(0,255,157,0.08);border:1px solid rgba(0,255,157,0.15);color:var(--text);border-top-right-radius:4px;}
+.chat-history{padding:14px 16px;max-height:350px;overflow-y:auto;display:flex;flex-direction:column;}
 .user-input-box{display:flex;gap:8px;margin-top:12px;width:100%;}
 .user-input-box input{flex:1;background:var(--panel2);border:1px solid rgba(0,229,255,0.25);border-radius:8px;padding:10px 14px;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:0.82rem;outline:none;transition:border .2s;}
 .user-input-box input:focus{border-color:var(--cyan);box-shadow:0 0 8px rgba(0,229,255,0.2);}
@@ -226,40 +236,41 @@ textarea.wa-input{resize:vertical;min-height:80px;line-height:1.6;}
     </div>
     <!-- Unified NEXUS Box -->
     <div class="resp-box" style="width:100%">
-      <!-- Top: Nexus Response -->
-      <div style="padding:14px 18px;min-height:52px;border-bottom:1px solid rgba(0,229,255,0.08);">
-        <div class="resp-txt" id="resp">Ready. Tap the orb, then speak a command.</div>
-        <div class="out-x" id="outx"></div>
-      </div>
-      <!-- Middle: Text Input -->
-      <div style="display:flex;gap:0;border-bottom:1px solid rgba(0,229,255,0.08);">
-        <input type="text" id="user-text-input" 
-          placeholder="Type command or question here... (Enter dabao ya Send karo)"
-          onkeydown="if(event.key==='Enter') sendTextInput()"
-          style="flex:1;background:transparent;border:none;padding:12px 16px;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:0.82rem;outline:none;"/>
-        <button onclick="sendTextInput()"
-          style="padding:12px 18px;background:rgba(0,229,255,0.08);border:none;border-left:1px solid rgba(0,229,255,0.15);color:var(--cyan);font-family:'Share Tech Mono',monospace;font-size:0.72rem;cursor:pointer;transition:all .2s;letter-spacing:0.08em;"
-          onmouseover="this.style.background='rgba(0,229,255,0.18)'" 
-          onmouseout="this.style.background='rgba(0,229,255,0.08)'">
-          ➤ SEND
-        </button>
-      </div>
-      <!-- Bottom: AI Output -->
-      <div id="ai-output-box" style="display:none;">
-        <div style="padding:10px 16px;background:rgba(0,229,255,0.05);border-bottom:1px solid rgba(0,229,255,0.1);display:flex;align-items:center;justify-content:space-between;">
-          <div style="display:flex;align-items:center;gap:8px;">
-            <img src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='48' fill='none' stroke='%2300e5ff' stroke-width='3'/><circle cx='50' cy='50' r='32' fill='none' stroke='%2300ff9d' stroke-width='2'/><circle cx='50' cy='50' r='18' fill='%2300e5ff' opacity='0.4'/><text x='50' y='62' text-anchor='middle' font-size='38' font-weight='bold' fill='%2300e5ff' font-family='Arial'>N</text></svg>" width="24" height="24" style="flex-shrink:0"/>
-            <div>
-              <div style="color:var(--cyan);font-size:0.65rem;letter-spacing:0.15em;font-weight:bold;">NEXUS AI</div>
-              <div style="color:var(--muted);font-size:0.56rem;margin-top:1px" id="ai-output-question"></div>
-            </div>
+      <!-- Chat History — ChatGPT style -->
+      <div class="chat-history" id="chat-history">
+        <div class="chat-bubble-nexus">
+          <div class="chat-avatar chat-avatar-nexus">N</div>
+          <div class="chat-msg chat-msg-nexus">
+            <span id="resp">Ready. Tap the orb or type below.</span>
+            <div class="out-x" id="outx"></div>
           </div>
-          <button onclick="speakAIAnswer()"
-            style="padding:4px 10px;background:rgba(0,255,157,0.1);border:1px solid rgba(0,255,157,0.3);border-radius:6px;color:#00ff9d;font-size:0.62rem;cursor:pointer;font-family:'Share Tech Mono',monospace;letter-spacing:0.08em;">
-            🔊 SPEAK
-          </button>
         </div>
-        <div class="ai-output-body" id="ai-output-body" style="padding:14px 16px;font-size:0.82rem;line-height:1.85;color:var(--text);max-height:280px;overflow-y:auto;"></div>
+      </div>
+      <!-- Hidden elements for compatibility -->
+      <div id="ai-output-box" style="display:none;">
+        <div id="ai-output-question"></div>
+        <div class="ai-output-body" id="ai-output-body"></div>
+      </div>
+      <!-- Input Box — ChatGPT style -->
+      <div style="display:flex;gap:0;border-top:1px solid rgba(0,229,255,0.1);align-items:center;padding:8px 12px;gap:8px;">
+        <input type="text" id="user-text-input"
+          placeholder="Message Nexus..."
+          onkeydown="if(event.key==='Enter') sendTextInput()"
+          style="flex:1;background:rgba(0,229,255,0.04);border:1px solid rgba(0,229,255,0.15);border-radius:10px;padding:10px 14px;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:0.82rem;outline:none;transition:border .2s;"
+          onfocus="this.style.borderColor='var(--cyan)'"
+          onblur="this.style.borderColor='rgba(0,229,255,0.15)'"/>
+        <!-- Speaker Toggle Button -->
+        <button id="speaker-btn" onclick="toggleSpeaker()" title="Voice on/off"
+          style="width:36px;height:36px;border-radius:50%;background:rgba(0,255,157,0.1);border:1px solid rgba(0,255,157,0.3);color:#00ff9d;font-size:1rem;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          🔊
+        </button>
+        <!-- Send Button -->
+        <button onclick="sendTextInput()"
+          style="width:36px;height:36px;border-radius:50%;background:rgba(0,229,255,0.15);border:1px solid rgba(0,229,255,0.3);color:var(--cyan);font-size:0.85rem;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;flex-shrink:0;"
+          onmouseover="this.style.background='rgba(0,229,255,0.25)'"
+          onmouseout="this.style.background='rgba(0,229,255,0.15)'">
+          ➤
+        </button>
       </div>
     </div>
     <div class="server-warn" id="srv-warn" style="display:none">
@@ -648,37 +659,18 @@ document.getElementById('lang-hi').classList.toggle('active',currentLanguage==='
 // ── RESPONSIVE VOICE TTS — Natural Indian Voice ─────────────
 
 async function speak(text, cb){
+  // Agar speaker off hai toh skip karo
+  if(!window._speakerOn){ if(cb)cb(); return; }
   // Mic poora destroy karo
   try{if(rec){rec.abort();rec.stop();}}catch(e){}
   rec = null; isRec = false;
   clearTimeout(restTO);
   window._nexusSpeaking = true;
-  window._micBlocked = true;  // Hard block mic
+  window._micBlocked = true;
   window._lastSpokenText = text;
   setState('speaking');
 
-  // ElevenLabs TTS try karo pehle — natural human voice
-  try {
-    const lang = currentLanguage === 'hi' ? 'hi' : 'en';
-    const res = await execCmd('elevenlabs_tts', {text: text, lang: lang});
-    let data; try{ data = JSON.parse(res.message); }catch(e){ data = res; }
-    if(data.ok && data.audio_b64){
-      const audioBlob = base64ToBlob(data.audio_b64, 'audio/mpeg');
-      const audioUrl = URL.createObjectURL(audioBlob);
-      const audio = new Audio(audioUrl);
-      window._currentAudio = audio;
-      audio.onended = () => {
-        URL.revokeObjectURL(audioUrl);
-        window._currentAudio = null;
-        afterSpeak();
-      };
-      audio.onerror = () => { afterSpeak(); };
-      await audio.play();
-      return;
-    }
-  } catch(e) {
-    console.log('[TTS] ElevenLabs failed, using fallback');
-  }
+  // ElevenLabs disabled — permission issue
   // Fallback — ResponsiveVoice/Browser
 
   // Text ki length se bolne ka time estimate karo
@@ -767,29 +759,58 @@ function _speakFallback(text, cb){
 
 
 function respond(text,extraHtml=''){
-  // Sirf resp box mein dikhao (commands ke liye)
   respEl.textContent=text;
   outxEl.innerHTML=extraHtml;
-  speak(text);
+  // Chat bubble add karo
+  addChatBubble(text, false, extraHtml || text);
+  if(window._speakerOn) speak(text);
 }
 
 function showAnswer(question, answer, formatted){
-  // Ek hi unified output — dono voice aur text ke liye
-  const outBox = document.getElementById('ai-output-box');
   const outBody = document.getElementById('ai-output-body');
   const outQ = document.getElementById('ai-output-question');
-  
-  // Pehla clear karo
-  outxEl.innerHTML = '';
-  respEl.textContent = question;
-  
-  // AI box show karo
-  outQ.textContent = question;
-  outBody.innerHTML = formatted;
-  outBox.style.display = 'block';
-  
-  // Scroll to answer
-  setTimeout(()=>outBox.scrollIntoView({behavior:'smooth', block:'nearest'}), 100);
+  if(outQ) outQ.textContent = question;
+  if(outBody) outBody.innerHTML = formatted;
+
+  // User bubble
+  addChatBubble(question, true);
+
+  // Nexus answer bubble
+  const history = document.getElementById('chat-history');
+  const div = document.createElement('div');
+  div.className = 'chat-bubble-nexus';
+
+  const avatar = document.createElement('div');
+  avatar.className = 'chat-avatar chat-avatar-nexus';
+  avatar.textContent = 'N';
+
+  const msg = document.createElement('div');
+  msg.className = 'chat-msg chat-msg-nexus';
+
+  const body = document.createElement('div');
+  body.style.cssText = 'font-size:0.78rem;line-height:1.8';
+  body.innerHTML = formatted;
+
+  const btnRow = document.createElement('div');
+  btnRow.style.cssText = 'margin-top:8px;display:flex;justify-content:flex-end;';
+
+  const speakBtn = document.createElement('button');
+  speakBtn.textContent = '🔊 SPEAK';
+  speakBtn.style.cssText = 'padding:3px 9px;background:rgba(0,255,157,0.08);border:1px solid rgba(0,255,157,0.25);border-radius:5px;color:#00ff9d;font-size:0.6rem;cursor:pointer;font-family:Share Tech Mono,monospace;';
+  speakBtn._answer = answer;
+  speakBtn.onclick = function(){ speak(this._answer); };
+
+  btnRow.appendChild(speakBtn);
+  msg.appendChild(body);
+  msg.appendChild(btnRow);
+  div.appendChild(avatar);
+  div.appendChild(msg);
+  history.appendChild(div);
+  setTimeout(()=>history.scrollTop=history.scrollHeight, 100);
+}
+
+function speakText(text){
+  speak(text);
 }
 
 function respondCard(text,ico,title,sub,cardClass=''){
@@ -877,6 +898,38 @@ function ytPlayBtn(songName, btn) {
 }
 
 // ═══ TEXT INPUT HANDLER ═════════════════════════════════════
+// Speaker toggle
+window._speakerOn = true;
+function toggleSpeaker(){
+  window._speakerOn = !window._speakerOn;
+  const btn = document.getElementById('speaker-btn');
+  if(window._speakerOn){
+    btn.textContent = '🔊';
+    btn.style.background = 'rgba(0,255,157,0.1)';
+    btn.style.borderColor = 'rgba(0,255,157,0.3)';
+    btn.style.color = '#00ff9d';
+  } else {
+    btn.textContent = '🔇';
+    btn.style.background = 'rgba(255,45,107,0.1)';
+    btn.style.borderColor = 'rgba(255,45,107,0.3)';
+    btn.style.color = '#ff2d6b';
+  }
+}
+
+// Add chat bubble to history
+function addChatBubble(text, isUser=false, html=''){
+  const history = document.getElementById('chat-history');
+  if(!history) return;
+  const div = document.createElement('div');
+  div.className = isUser ? 'chat-bubble-user' : 'chat-bubble-nexus';
+  const avatar = `<div class="chat-avatar ${isUser?'chat-avatar-user':'chat-avatar-nexus'}">${isUser?'U':'N'}</div>`;
+  const msg = `<div class="chat-msg ${isUser?'chat-msg-user':'chat-msg-nexus'}">${html || text}</div>`;
+  div.innerHTML = isUser ? msg+avatar : avatar+msg;
+  history.appendChild(div);
+  // Scroll to bottom
+  setTimeout(()=>history.scrollTop=history.scrollHeight, 100);
+}
+
 function base64ToBlob(b64, mimeType){
   const bytes = atob(b64);
   const arr = new Uint8Array(bytes.length);
